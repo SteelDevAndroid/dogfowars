@@ -6,7 +6,7 @@
 > **Game**: La Meute Orpheline
 > **Platform Targets**: Mobile — Android d'abord, iOS ensuite ; tactile uniquement ; portrait et paysage
 > **Related GDDs**: `design/gdd/game-concept.md` (seul document de design existant). Aucun GDD système n'existe encore : carte et brouillard, énergie et nœuds, unités et combat, IA à intentions, ruines et fragments devront chacun confirmer leurs besoins d'interface ici.
-> **Accessibility Tier**: Standard (proposé — à confirmer dans `design/accessibility-requirements.md`, qui n'existe pas encore)
+> **Accessibility Tier**: Standard + 3 éléments Comprehensive (animations réduites, équivalent visuel de chaque son de jeu, disposition paysage inversée) — engagé dans `design/accessibility-requirements.md` le 2026-10-29
 > **Style Reference**: `design/gdd/game-concept.md` § Visual Identity Anchor (pas encore d'art bible)
 > **Mockups**: canvas « Meute Orpheline HUD » — https://claude.ai/artifact/URFJTkozqrKHZ5FNuZDjAT (6 artboards : 3 états × portrait et paysage)
 > **Template**: HUD Design
@@ -164,13 +164,13 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 | Compteur de tour | Top bar / rail | Oui | — | Gestion des tours | Début de chaque tour | 35% (portrait) | 12 pt libellé, 20 pt chiffre | 1 | Libellé texte « Tour 7 / 30 » |
 | Énergie | Top bar / rail | Oui | — | Économie d'énergie | À chaque dépense ou gain | 20% | 16 pt | 1 | Icône éclair + chiffre |
 | Fragments de la partie | Top bar / rail | Oui | — | Ruines et fragments | À la lecture d'une ruine | 20% | 16 pt | 1 | Icône ruine + chiffre |
-| Bouton pause | Top bar / rail | Oui | — | — | — | 44 pt | 44 × 44 pt | 1 | `aria-label` « Pause » |
+| Bouton pause | Top bar / rail | Oui | — | — | — | 44 pt | Zone tactile 48 × 48 dp (Android) / 44 × 44 pt (iOS) | 1 | `aria-label` « Pause » |
 | Puce de menace | Alert row | Non | ≥ 1 intention ennemie visant une unité du joueur | IA à intentions | Fin du tour du joueur, tour ennemi | 50% | 13 pt | 2 | Motif hachuré + texte |
 | Puce de ruine | Alert row | Non | Ruine repérée non lue | Brouillard, ruines | Après chaque déplacement | 50% | 13 pt | 3 | Texte avec distance |
 | Puces de résultat (tour ennemi) | Alert row | Non | Tour ennemi | IA à intentions | Pendant le tour ennemi | 50% | 13 pt | 2 | Icône ✓ ou hachuré + texte |
 | Marqueurs de carte | Map | Selon l'état | — | Carte, unités, IA | Continu | 1 tuile | Tuile ≥ 31 pt | — | Forme distincte par type (voir 10.1) |
 | Panneau d'unité | Context panel | Non | Unité du joueur sélectionnée | Unités et combat | À la sélection, après chaque action | 100% (portrait), 27% (paysage) | 12 pt texte | 4 | Texte complet |
-| Boutons d'action | Context panel | Non | Unité sélectionnée | Unités et combat | Après chaque action | 1/3 du panneau | 44 pt de haut | 4 | Bouton désactivé = état `disabled` lu par le lecteur d'écran |
+| Boutons d'action | Context panel | Non | Unité sélectionnée | Unités et combat | Après chaque action | 1/3 du panneau | Zone tactile 48 dp (Android) / 44 pt (iOS) de haut | 4 | Bouton désactivé = état `disabled` lu par le lecteur d'écran |
 | Marqueur de cible | Map | Non | Mode ciblage | Unités et combat | À l'entrée en mode ciblage | 1 tuile | Tuile ≥ 31 pt | — | Forme (crochets d'angle), pas seulement la couleur |
 | Aperçu de combat | Context panel | Non | Une cible est choisie | Unités et combat (formule du GDD de combat) | À chaque changement de cible | 100% / 27% | 12 pt | 4 (remplace les actions) | Texte complet : « Inflige −4 · Riposte −2 » |
 | Jauge de PV | Map (sous l'unité) | Non | PV < PV max | Unités et combat | À chaque dégât ou soin | 80% de la tuile | 3 pt de haut | — | Valeur dans le panneau d'unité et dans l'annonce du lecteur d'écran |
@@ -409,7 +409,7 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 | Part de l'écran — états à commandes verrouillées (panneau de fragment, tour ennemi) | 55% | Même méthode | Portrait ≈ 48% ; paysage ≈ 43% | OK. Exception assumée : le joueur n'agit pas sur la carte pendant ces états, et la carte reste visible au-dessus du panneau |
 | Recouvrement de la carte par un panneau | 0% | Aucun panneau ne passe au-dessus des tuiles jouables | 0% sur les mockups | OK |
 | Contraste minimal du texte HUD | 4,5:1 (WCAG AA) | Mesuré sur chaque fond réel | Non mesuré | À vérifier |
-| Taille minimale des cibles tactiles | 44 × 44 pt | Mesurée à la plus petite résolution visée | 44 pt et plus sur les mockups | OK, à vérifier sur appareil |
+| Taille minimale des zones tactiles | 48 × 48 dp sur Android, 44 × 44 pt sur iOS (`design/accessibility-requirements.md`) | Zone qui réagit à l'appui, mesurée sur appareil à la plus petite résolution visée ; elle peut déborder du dessin de l'élément sans changer la mise en page | Boutons du panneau et « Fin du tour » : 48 pt et plus dessinés. Bouton pause et boutons d'action en paysage : 44 pt dessinés, zone à étendre. Puces d'alerte : ≈ 30 pt dessinés, zone à étendre à 48 dp | À implémenter ; budget d'écran inchangé |
 | Taille minimale d'une tuile | 31 pt | Mesurée au zoom minimal | ≈ 34 pt en paysage (carte de 436 pt sur 12 colonnes), 42 pt en portrait | À valider au doigt sur appareil |
 | Taille minimale du texte | 12 pt | Mesurée à l'échelle de texte 100% | 12 pt : les stats passent en une ligne de 12 pt, les libellés de 10 pt disparaissent | OK après réduction |
 
@@ -457,7 +457,8 @@ envisagée : inverser le panneau de contexte à gauche en paysage pour les gauch
 ## 10. Accessibility
 
 > Exigences propres au HUD uniquement. Le standard du projet ira dans
-> `design/accessibility-requirements.md`, qui reste à écrire.
+> `design/accessibility-requirements.md` (palier Standard + 3 éléments Comprehensive,
+> engagé le 2026-10-29). En cas de conflit, ce document-là l'emporte.
 
 ### 10.1 Colorblind Modes
 
@@ -520,7 +521,6 @@ dialogues »). Si des sons portent une information (menace, réveil), chacun doi
 | Réduction des animations | On / Off | Off (suit le réglage système) | Applique 10.3 |
 | Portée de déplacement | On / Off | On | Affiche ou masque les points de portée |
 | Vitesse du tour ennemi | Normale / Rapide / Instantanée | Normale | Durée des animations du tour ennemi |
-| Contraste élevé | On / Off | Off | Variantes contrastées à définir dans l'art bible |
 | Panneau à gauche (paysage) | On / Off | Off | Inverse rail et panneau (sous réserve, voir 13) |
 
 ---
@@ -552,7 +552,7 @@ découle encore d'une formule.
 - [ ] Pendant le tour du joueur, le HUD couvre au plus 45% de l'écran en portrait et en paysage, mesuré à la résolution de référence dans l'état « unité sélectionnée » avec 2 puces
 - [ ] Pendant le panneau de fragment et le tour ennemi, le HUD couvre au plus 55% de l'écran
 - [ ] La zone d'alerte n'affiche jamais plus de 2 puces
-- [ ] Toutes les cibles tactiles mesurent au moins 44 × 44 pt
+- [ ] Tout élément qui réagit à l'appui (boutons, puces d'alerte, bouton pause) a une zone tactile d'au moins 48 × 48 dp sur Android et 44 × 44 pt sur iOS, mesurée sur appareil, même quand son dessin est plus petit
 - [ ] Une tuile mesure au moins 31 pt au zoom minimal
 
 **Per-Context Correctness**
@@ -615,4 +615,6 @@ découle encore d'une formule.
 | Les noms des unités (« Éclaireur », « Gardien ») et le texte du fragment sont provisoires. | narrative-director | Après le signal 2 (5 testeurs extérieurs) | |
 | Le motif de faction pour les daltoniens (antenne, emblème) reste à dessiner. | art-director | `/art-bible` | |
 | Option de panneau à gauche en paysage pour les gauchers : à garder ? | ux-designer | Avant `/ux-review` | |
-| `design/accessibility-requirements.md` n'existe pas : le palier Standard est une proposition. | user | `/ux-design accessibility` | |
+| `design/accessibility-requirements.md` n'existe pas : le palier Standard est une proposition. | user | `/ux-design accessibility` | **Résolu le 2026-10-29** : palier Standard + 3 éléments Comprehensive engagé |
+| Cibles de 44 pt contre les 48 dp recommandés sur Android. | user + ux-designer | Avant `/ux-review` | **Résolu le 2026-10-29** : zones tactiles étendues (48 dp Android, 44 pt iOS) au-delà du dessin quand il le faut ; mise en page et budget inchangés (section 7) |
+| Mode contraste élevé : l'engager ou le retirer ? | user | Avant `/art-bible` | **Résolu le 2026-10-29** : retiré des réglages pour l'instant ; noté dans les limitations de `design/accessibility-requirements.md` |
