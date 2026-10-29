@@ -269,7 +269,7 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 
 **Panneau d'unité**
 
-- Visual description : feuille sombre à coins arrondis, environ 205 pt de haut en portrait. Ligne d'en-tête : vignette de l'unité sur fond de faction (44 pt), nom en gras, et sous le nom les stats en une ligne, en mono 12 pt : « PV 10/10 · ATQ 2 · DÉF 1 · MVT 2 ». Phrase d'explication sous l'en-tête (pilier 3 : une unité s'explique en une phrase). Puis 3 boutons d'action et le bouton « Fin du tour ». La grille de 4 cases de stats des premiers mockups est supprimée.
+- Visual description : feuille sombre à coins arrondis, environ 220 pt de haut en portrait. Ligne d'en-tête : vignette de l'unité sur fond de faction (44 pt), nom en gras, et sous le nom les stats en une ligne, en mono 12 pt : « PV 10/10 · ATQ 2 · DÉF 1 · MVT 2 ». Phrase d'explication sous l'en-tête (pilier 3 : une unité s'explique en une phrase). Puis 3 boutons d'action et le bouton « Fin du tour ». La grille de 4 cases de stats des premiers mockups est supprimée.
 - Data displayed : type, phrase, PV actuels / max, attaque, défense, mouvement.
 - Update behavior : contenu remplacé immédiatement à la sélection d'une autre unité.
 - Urgency states : unité visée par une intention : la vignette porte la pastille « ! » (à ajouter aux mockups) ; unité blessée : les PV s'affichent en ambre sous la moitié.
@@ -364,7 +364,7 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 | Tour du joueur, aucune sélection | Top bar, puces, « Fin du tour » | Panneau d'unité | Le panneau se réduit au bouton « Fin du tour » | Début du tour |
 | Tour du joueur, unité sélectionnée | Top bar, puces, panneau d'unité, portée sur la carte | — | — | Appui sur une unité ; immédiat |
 | Tour du joueur, ciblage | Top bar, puces, panneau d'unité avec l'aperçu de combat, marqueurs de cible | Boutons d'action, portée de déplacement, « Fin du tour » | « Annuler » et « Confirmer l'attaque » prennent la place de « Fin du tour » | « Attaquer », ou appui sur un ennemi à portée ; immédiat |
-| Résolution d'une attaque | Top bar, chiffres de dégâts, jauges de PV, marqueurs de perte | Aperçu de combat | Commandes verrouillées le temps de l'animation (≈ 1,6 s, voir 11) | « Confirmer l'attaque » |
+| Résolution d'une attaque | Top bar, chiffres de dégâts, jauges de PV, marqueurs de perte, panneau d'unité (PV à jour, résumé du coup, tous les boutons désactivés) | Aperçu de combat | Commandes verrouillées le temps de l'animation (≈ 1,6 s, voir 11) | « Confirmer l'attaque » |
 | Début du tour après des pertes | Comme le tour du joueur, plus la puce de perte | — | Débris et tuiles désaturées encore visibles sur la carte | Fin du tour ennemi |
 | Lecture d'une ruine | Top bar, panneau de fragment | Panneau d'unité, puce de ruine | Pastille des fragments en ocre | Fin du déplacement sur la ruine → recoloration → panneau (300 ms) |
 | Tour ennemi | Top bar, étiquette « Tour ennemi », puces de résultat, journal | Panneau d'unité, « Fin du tour » | Fond et cadre de carte teintés en violet ; barre de tour en violet | Appui sur « Fin du tour » |
@@ -404,13 +404,13 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 | Budget Constraint | Limit | Measurement Method | Current Estimate | Status |
 |---|---|---|---|---|
 | Éléments HUD actifs simultanés | 8 | Compter les éléments visibles hors marqueurs de carte | 8 (tour, énergie, fragments, pause, 2 puces, panneau, fin du tour) ; la zone d'alerte est plafonnée à 2 puces (règle 4 de la section 8) | OK, à la limite |
-| Part de l'écran couverte par le HUD — portrait, tour du joueur | 45% | Surface des zones HUD / surface de l'écran à 390 × 844, mesurée dans l'état « unité sélectionnée » avec 2 puces (le cas courant le plus chargé) | ≈ 38% (top bar + puces ≈ 116 pt, panneau ≈ 205 pt) | OK après réduction ; mockups à mettre à jour |
-| Part de l'écran couverte par le HUD — paysage, tour du joueur | 45% | Largeur du rail + largeur du panneau / largeur de l'écran à 844 × 390 | ≈ 43% (rail 140 pt + panneau 224 pt) | OK après réduction ; mockups à mettre à jour |
+| Part de l'écran couverte par le HUD — portrait, tour du joueur | 45% | Surface des zones HUD / surface de l'écran à 390 × 844, mesurée dans l'état « unité sélectionnée » avec 2 puces (le cas courant le plus chargé) | ≈ 40% (top bar + puces ≈ 116 pt, panneau ≈ 220 pt, mesuré sur le mockup) | OK |
+| Part de l'écran couverte par le HUD — paysage, tour du joueur | 45% | Largeur du rail + largeur du panneau / largeur de l'écran à 844 × 390 | ≈ 43% (rail 140 pt + panneau 224 pt) | OK |
 | Part de l'écran — états à commandes verrouillées (panneau de fragment, tour ennemi) | 55% | Même méthode | Portrait ≈ 48% ; paysage ≈ 43% | OK. Exception assumée : le joueur n'agit pas sur la carte pendant ces états, et la carte reste visible au-dessus du panneau |
 | Recouvrement de la carte par un panneau | 0% | Aucun panneau ne passe au-dessus des tuiles jouables | 0% sur les mockups | OK |
 | Contraste minimal du texte HUD | 4,5:1 (WCAG AA) | Mesuré sur chaque fond réel | Non mesuré | À vérifier |
 | Taille minimale des cibles tactiles | 44 × 44 pt | Mesurée à la plus petite résolution visée | 44 pt et plus sur les mockups | OK, à vérifier sur appareil |
-| Taille minimale d'une tuile | 31 pt | Mesurée au zoom minimal | 31 pt en paysage, 42 pt en portrait | À valider au doigt sur appareil |
+| Taille minimale d'une tuile | 31 pt | Mesurée au zoom minimal | ≈ 34 pt en paysage (carte de 436 pt sur 12 colonnes), 42 pt en portrait | À valider au doigt sur appareil |
 | Taille minimale du texte | 12 pt | Mesurée à l'échelle de texte 100% | 12 pt : les stats passent en une ligne de 12 pt, les libellés de 10 pt disparaissent | OK après réduction |
 
 ---
@@ -480,7 +480,7 @@ envisagée : inverser le panneau de contexte à gauche en paysage pour les gauch
 À 150%, le top bar en portrait ne tient plus sur une ligne : l'énergie et les fragments
 passent sous le compteur de tour. En paysage, le rail garde sa largeur et les puces
 passent sur deux lignes. Le panneau de fragment défile verticalement plutôt que de
-couper la citation. Les cases de stats passent de 4 à 2 colonnes.
+couper la citation. La ligne de stats du panneau d'unité passe sur deux lignes (PV et ATQ, puis DÉF et MVT) au lieu d'être tronquée.
 
 **Text scaling test matrix** :
 
@@ -488,7 +488,7 @@ couper la citation. Les cases de stats passent de 4 à 2 colonnes.
 |---|---|---|---|---|
 | Top bar | TBD | TBD | TBD | Passage sur deux lignes |
 | Puces d'alerte | TBD | TBD | TBD | Retour à la ligne dans la puce |
-| Panneau d'unité | TBD | TBD | TBD | Stats en 2 colonnes |
+| Panneau d'unité | TBD | TBD | TBD | Ligne de stats sur deux lignes |
 | Panneau de fragment | TBD | TBD | TBD | Défilement interne |
 | Journal du tour ennemi | TBD | TBD | TBD | Défilement interne |
 
@@ -582,7 +582,7 @@ découle encore d'une formule.
 
 **Accessibility**
 - [ ] Tout texte du HUD atteint 4,5:1 de contraste sur son fond (3:1 pour le texte de 24 pt et plus)
-- [ ] Aucune information ne passe par la couleur seule (test : capture en niveaux de gris de chacun des 6 mockups)
+- [ ] Aucune information ne passe par la couleur seule (test : capture en niveaux de gris de chacun des 12 mockups, portrait et paysage)
 - [ ] À 150% d'échelle de texte, aucun texte n'est coupé ni ne chevauche un autre élément
 - [ ] La réduction des animations supprime toutes les animations de 10.3
 - [ ] Les réglages de 10.5 fonctionnent et sont conservés d'une session à l'autre
