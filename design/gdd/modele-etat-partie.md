@@ -84,7 +84,7 @@ définit le sens de ses champs et les seules fonctions qui l'écrivent.
 
 | Tranche | Contenu | Propriétaire |
 |---|---|---|
-| En-tête de partie | Version du schéma, identifiant de partie, graine, compteur de tirages, compteurs d'identifiants (prochain id d'unité, de nœud, de ruine, d'intention), numéro de tour, phase en cours, faction active, statut de fin | 1 (schéma, graine, compteurs d'id) ; 3 (tour, phase, faction active, statut de fin) |
+| En-tête de partie | Version du schéma, identifiant de partie, époque de réinitialisation du profil à la création, graine, compteur de tirages, compteurs d'identifiants (prochain id d'unité, de nœud, de ruine, d'intention), numéro de tour, T_MAX, drapeau « IA passive », phase en cours, faction active, statut de fin | 1 (schéma, identifiant, époque, graine, compteurs d'id) ; 3 (tour, T_MAX, IA passive, phase, faction active, statut de fin) |
 | Carte | Dimensions, terrain de chaque tuile (fixe pendant la partie), propriétaire de chaque tuile, état de couleur de chaque tuile, point d'intérêt de chaque tuile | 2 (dimensions, terrain, points d'intérêt) ; 11 (propriétaire) ; 15 (état de couleur) |
 | Visibilité | Pour chaque faction : tuiles vues actuellement, tuiles déjà découvertes | 5 |
 | Unités | Par id : type, faction, position, PV, a bougé, a agi, endormie | 6 (le réveil de 7 et les PV du combat 8 passent par les fonctions de 6) |
@@ -370,8 +370,9 @@ cas ; ce document en fixe seulement le contrat côté état.*
 - **Si la version du schéma est plus ancienne** : les migrations s'appliquent dans
   l'ordre, puis l'état est validé.
 - **Si la validation échoue au chargement** (un invariant ci-dessous est violé) : le
-  chargement est refusé, la sauvegarde n'est pas écrasée et une sauvegarde antérieure
-  est proposée. Propriétaire de l'écran de reprise : 16 et 18.
+  chargement est refusé, la sauvegarde n'est pas écrasée, et la copie de secours est
+  utilisée automatiquement, avec un avertissement (`design/gdd/sauvegarde-automatique.md`,
+  règle 15). Propriétaire de l'écran d'avertissement : 18.
 - **Si une entrée du journal des lectures de ruine est « en attente » au chargement et
   que le fragment est déjà dans le profil** : l'entrée passe à « validée » et la ruine
   reste lue.

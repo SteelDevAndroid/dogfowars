@@ -110,7 +110,7 @@ d'une information.
 | 13 | Ruines et fragments | Narrative | MVP | Not Started | — | 2, 5, 11, 15, 22 |
 | 14 | Chronique et progression méta | Narrative | Vertical Slice | Not Started | — | 13, 22 |
 | 15 | Recoloration du monde | Gameplay | MVP | Not Started | — | 2, 11 |
-| 16 | Sauvegarde automatique | Persistence | MVP | Not Started | — | 1, 22 |
+| 16 | Sauvegarde automatique | Persistence | MVP | Designed | design/gdd/sauvegarde-automatique.md | 1, 22 |
 | 17 | HUD (inferred) | UI | MVP | In Design | design/ux/hud.md | 3, 4, 5, 6, 8, 9, 10, 11, 13, 15, 19, 23 |
 | 18 | Menus et écrans hors partie (inferred) | UI | Vertical Slice | Not Started | — | 3, 14, 16, 19 |
 | 19 | Réglages et accessibilité (inferred) | Meta | Vertical Slice | Not Started | — | 22 |
@@ -329,10 +329,10 @@ indépendants d'une même couche peuvent être conçus en parallèle.*
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 23 |
-| Design docs started | 6 (HUD, UX spec ; GDD 1, 22, 23, 2 et 3) |
-| Design docs reviewed | 1 (HUD : `/ux-review` NOT ASSESSED, 0 point bloquant) ; GDD 1, 22, 23, 2 et 3 en attente de `/design-review` |
+| Design docs started | 7 (HUD, UX spec ; GDD 1, 22, 23, 2, 3 et 16) |
+| Design docs reviewed | 1 (HUD : `/ux-review` NOT ASSESSED, 0 point bloquant) ; GDD 1, 22, 23, 2, 3 et 16 en attente de `/design-review` |
 | Design docs approved | 0 |
-| MVP systems designed | 5/18 |
+| MVP systems designed | 6/18 |
 | Vertical Slice systems designed | 0/4 |
 
 ---

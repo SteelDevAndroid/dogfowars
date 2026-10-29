@@ -256,6 +256,19 @@ formulas:
     notes: "Start weights 1, 8, 4, 10, 2, 60; U_cap 20. F = ruins read this match. D = 8 per turn left on domination. Best score submitted to the profile (22)."
     added: 2026-10-29
     revised: ""
+  - name: loss_bound
+    status: active
+    source: design/gdd/sauvegarde-automatique.md
+    referenced_by:
+      - design/gdd/sauvegarde-automatique.md
+    variables:
+      - t_write
+      - t_action_min
+    output_range: [1, 10]
+    expression: "1 + ceil(t_write / t_action_min)"
+    notes: "Most player actions a kill can lose. Provisional t_action_min 250 ms gives 2. Never a fragment already shown (save rule 10)."
+    added: 2026-10-29
+    revised: ""
 
 # Example:
 #
@@ -415,6 +428,26 @@ constants:
       - design/gdd/tours-conditions-victoire.md
     value: 60
     unit: score points per ruin read (shown on the HUD ruin chip)
+    added: 2026-10-29
+    revised: ""
+  - name: SAVE_MAIN_THREAD_BUDGET
+    status: active
+    source: design/gdd/sauvegarde-automatique.md
+    referenced_by:
+      - design/gdd/sauvegarde-automatique.md
+      - design/gdd/commandes-evenements.md
+    value: 8
+    unit: ms per save on the main thread (provisional)
+    added: 2026-10-29
+    revised: ""
+  - name: SAVE_LOAD_BUDGET
+    status: active
+    source: design/gdd/sauvegarde-automatique.md
+    referenced_by:
+      - design/gdd/sauvegarde-automatique.md
+      - design/gdd/profil-donnees-meta.md
+    value: 150
+    unit: ms to load profile and match at launch (provisional)
     added: 2026-10-29
     revised: ""
 
