@@ -262,7 +262,7 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
   - tuile perdue : désaturation en fondu vers le gris (l'inverse de la recoloration), puis passage à la couleur du nouveau propriétaire s'il y en a un ; la tuile garde un liseré gris clair en pointillés, en retrait de 4 pt, jusqu'à la fin du tour suivant du joueur, pour que la perte reste visible après le fondu.
 - Data displayed : état de chaque tuile.
 - Update behavior : la recoloration d'une tuile se fait en fondu (durée à régler, voir 11).
-- Interaction : appui sur une tuile = sélection ; appui sur une tuile de portée = déplacement.
+- Interaction : appui sur une tuile = sélection ; appui sur une tuile de portée = déplacement. Un appui dont le doigt glisse de moins d'une demi-tuile reste un appui ; au-delà, c'est un défilement de la carte (seuil à régler en test).
 - Player customization : affichage de la portée (voir 10.5).
 
 ---
@@ -330,7 +330,7 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 - Data displayed : libellé seul.
 - Update behavior : désactivé pendant le tour ennemi (le panneau du tour ennemi le remplace).
 - Urgency states : aucun ; il ne doit jamais bloquer ni avertir, puisque les menaces sont déjà affichées.
-- Interaction : appui = fin du tour.
+- Interaction : appui = fin du tour. Le bouton est à au moins 8 dp de tout autre élément tactile, pour éviter de finir le tour par erreur.
 - Player customization : aucune.
 
 ---
@@ -448,9 +448,11 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 | Android tablette | Insets système | 600 dp et plus | Tactile | À spécifier : probablement le paysage avec plus de colonnes de carte |
 | iOS téléphone | Safe area | Gamme iPhone actuelle | Tactile | Mêmes règles qu'Android ; indicateur d'accueil en bas |
 
-**HUD repositionability requirement** : non requis sur mobile pour la certification. Option
-envisagée : inverser le panneau de contexte à gauche en paysage pour les gauchers
-(voir 13).
+**HUD repositionability requirement** : le repositionnement libre n'est pas requis sur
+mobile pour la certification et reste hors périmètre (`design/accessibility-requirements.md`,
+Known Intentional Limitations). La **disposition paysage inversée** est engagée : un
+réglage échange le rail et le panneau de contexte en paysage, pour les gauchers et
+l'usage à une main gauche (voir 10.5).
 
 ---
 
@@ -461,6 +463,12 @@ envisagée : inverser le panneau de contexte à gauche en paysage pour les gauch
 > engagé le 2026-10-29). En cas de conflit, ce document-là l'emporte.
 
 ### 10.1 Colorblind Modes
+
+Deux protections s'ajoutent : chaque signal coloré a une doublure non colorée (tableau
+ci-dessous), et le réglage **Palette daltonienne** (10.5) remplace les teintes par une
+palette adaptée aux daltonismes rouge-vert. La tritanopie est couverte par les
+doublures ; une palette dédiée n'est ajoutée que si le test de
+`design/accessibility-requirements.md` échoue.
 
 | Element | Color-Only Information Risk | Colorblind Mode Fix |
 |---|---|---|
@@ -521,7 +529,8 @@ dialogues »). Si des sons portent une information (menace, réveil), chacun doi
 | Réduction des animations | On / Off | Off (suit le réglage système) | Applique 10.3 |
 | Portée de déplacement | On / Off | On | Affiche ou masque les points de portée |
 | Vitesse du tour ennemi | Normale / Rapide / Instantanée | Normale | Durée des animations du tour ennemi |
-| Panneau à gauche (paysage) | On / Off | Off | Inverse rail et panneau (sous réserve, voir 13) |
+| Panneau à gauche (paysage) | On / Off | Off | Échange le rail et le panneau de contexte en paysage ; « Fin du tour » passe en bas à gauche. Engagé (élément Comprehensive de `design/accessibility-requirements.md`) |
+| Palette daltonienne | Off / Protanopie-Deutéranopie | Off | Remplace les couleurs de faction, de menace, de ruine et d'état par la palette alternative définie dans l'art bible ; formes, motifs et hachures inchangés. Exigé par le palier Standard |
 
 ---
 
@@ -537,7 +546,7 @@ dialogues »). Si des sons portent une information (menace, réveil), chacun doi
 | Durée des chiffres de dégâts | 800 ms | 400–1200 ms | Plus lisible, attaque plus longue | Plus vif | Indirect (réduction des animations) | Attaque + riposte ≈ 1,6 s au total |
 | Durée de l'éclatement et de la désaturation | 400 ms | 0–800 ms | Perte plus marquée | Perte plus discrète | Indirect | Pilier 1 : la perte doit rester visible |
 | Durée d'affichage des débris | Jusqu'à la fin du tour suivant du joueur | 1–2 tours | Le joueur retrouve mieux ses pertes | Carte plus nette | Non | |
-| Colonnes de carte visibles (zoom par défaut) | 8 portrait / 12 paysage | 6–10 / 10–14 | Plus de carte, tuiles plus petites | Tuiles plus grandes | Oui (pincement) | Tuile ≥ 31 pt |
+| Colonnes de carte visibles (zoom par défaut) | 8 portrait / 12 paysage | 6–10 / 10–14 | Plus de carte, tuiles plus petites | Tuiles plus grandes | Oui : pincement, et toujours un moyen sans geste à deux doigts (boutons +/− ou double appui, choix ouvert dans `design/accessibility-requirements.md`) | Tuile ≥ 31 pt |
 
 Valeurs de départ choisies pour les mockups ; elles sont à valider en playtest, aucune ne
 découle encore d'une formule.
@@ -582,11 +591,21 @@ découle encore d'une formule.
 
 **Accessibility**
 - [ ] Tout texte du HUD atteint 4,5:1 de contraste sur son fond (3:1 pour le texte de 24 pt et plus)
+- [ ] Les icônes, contours et marqueurs de carte atteignent 3:1 de contraste contre la tuile ou le panneau en dessous (WCAG 2.1 SC 1.4.11)
+- [ ] Avec la palette daltonienne activée, possession, factions, menaces et ruines restent distinctes dans un simulateur de protanopie et de deutéranopie
+- [ ] Aucun effet (pulsation, éclatement, recoloration, tour ennemi) ne produit plus de 3 flashs par seconde
 - [ ] Aucune information ne passe par la couleur seule (test : capture en niveaux de gris de chacun des 12 mockups, portrait et paysage)
 - [ ] À 150% d'échelle de texte, aucun texte n'est coupé ni ne chevauche un autre élément
 - [ ] La réduction des animations supprime toutes les animations de 10.3
 - [ ] Les réglages de 10.5 fonctionnent et sont conservés d'une session à l'autre
-- [ ] Le lecteur d'écran (TalkBack, VoiceOver) annonce chaque bouton, l'état désactivé et le titre du panneau de fragment
+- [ ] Chaque bouton et chaque puce tactile porte un nom accessible et un état (actif, désactivé) dans l'arbre d'interface
+- [ ] *Conditionnel* — seulement si la prise en charge de TalkBack et VoiceOver par le moteur est confirmée (NOT SOURCEABLE à ce jour, voir `design/accessibility-requirements.md`) : le lecteur d'écran annonce chaque bouton, l'état désactivé et le titre du panneau de fragment
+
+**Gestes et disposition**
+- [ ] Une partie complète se joue sans pincement ni geste à plusieurs doigts, zoom compris
+- [ ] Un appui qui glisse de moins d'une demi-tuile sélectionne la tuile au lieu de faire défiler la carte
+- [ ] « Fin du tour » est à au moins 8 dp de tout autre élément tactile, dans chaque état et chaque orientation
+- [ ] Avec « Panneau à gauche » activé en paysage, le rail et le panneau échangent leurs places sans qu'aucun élément ne se chevauche ni ne sorte des insets système
 
 **Notifications**
 - [ ] Les puces d'un même type se fusionnent en une seule avec un compteur
@@ -614,7 +633,7 @@ découle encore d'une formule.
 | Où afficher les protocoles et le niveau des nœuds dans le HUD ? Absents des mockups. | game-designer | GDD des protocoles et des nœuds | |
 | Les noms des unités (« Éclaireur », « Gardien ») et le texte du fragment sont provisoires. | narrative-director | Après le signal 2 (5 testeurs extérieurs) | |
 | Le motif de faction pour les daltoniens (antenne, emblème) reste à dessiner. | art-director | `/art-bible` | |
-| Option de panneau à gauche en paysage pour les gauchers : à garder ? | ux-designer | Avant `/ux-review` | |
+| Option de panneau à gauche en paysage pour les gauchers : à garder ? | ux-designer | Avant `/ux-review` | **Résolu le 2026-10-29** : gardée et engagée (élément Comprehensive de `design/accessibility-requirements.md`) |
 | `design/accessibility-requirements.md` n'existe pas : le palier Standard est une proposition. | user | `/ux-design accessibility` | **Résolu le 2026-10-29** : palier Standard + 3 éléments Comprehensive engagé |
 | Cibles de 44 pt contre les 48 dp recommandés sur Android. | user + ux-designer | Avant `/ux-review` | **Résolu le 2026-10-29** : zones tactiles étendues (48 dp Android, 44 pt iOS) au-delà du dessin quand il le faut ; mise en page et budget inchangés (section 7) |
 | Mode contraste élevé : l'engager ou le retirer ? | user | Avant `/art-bible` | **Résolu le 2026-10-29** : retiré des réglages pour l'instant ; noté dans les limitations de `design/accessibility-requirements.md` |
