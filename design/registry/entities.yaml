@@ -164,6 +164,33 @@ formulas:
     expression: "INTENT_CAP * INTENT_RETENTION_TURNS"
     added: 2026-10-29
     revised: ""
+  - name: next_fragment
+    status: active
+    source: design/gdd/profil-donnees-meta.md
+    referenced_by:
+      - design/gdd/profil-donnees-meta.md
+      - design/gdd/modele-etat-partie.md
+    variables:
+      - P_f
+      - C_f
+    output_range: [1, 12]
+    expression: "min(P_f minus C_f), or NONE when P_f is a subset of C_f"
+    notes: "Stable fragment ID the next ruin of faction f gives. Never stored. Read by Ruins (13)."
+    added: 2026-10-29
+    revised: ""
+  - name: chronicle_progress
+    status: active
+    source: design/gdd/profil-donnees-meta.md
+    referenced_by:
+      - design/gdd/profil-donnees-meta.md
+    variables:
+      - C_f
+      - P_f
+    output_range: [0, 12]
+    expression: "size of (C_f intersect P_f)"
+    notes: "Retired IDs excluded. Chronicle (14) compares it to its 4/12 unlock threshold."
+    added: 2026-10-29
+    revised: ""
 
 # Example:
 #
@@ -249,6 +276,15 @@ constants:
       - design/gdd/modele-etat-partie.md
     value: 65536
     unit: outcomes
+    added: 2026-10-29
+    revised: ""
+  - name: PROFILE_SIZE_CAP
+    status: active
+    source: design/gdd/profil-donnees-meta.md
+    referenced_by:
+      - design/gdd/profil-donnees-meta.md
+    value: 262144
+    unit: bytes (256 KB)
     added: 2026-10-29
     revised: ""
 

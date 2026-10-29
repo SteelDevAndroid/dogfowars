@@ -93,7 +93,7 @@ définit le sens de ses champs et les seules fonctions qui l'écrivent.
 | Factions | Par faction : stock d'énergie, protocoles recherchés, recherche en cours, éliminée ou non | 10 (stock) ; 12 (protocoles) ; 3 (éliminée) |
 | Intentions | Par id : unité auteur, cible (id), tour d'annonce, tour d'exécution, statut (annoncée, exécutée, annulée), raison d'annulation (cible détruite, cible déplacée) | 9 |
 | Compteurs de score | Comptes bruts : fragments lus pendant la partie, nœuds tenus, unités détruites | Chaque compte a le système qui le fait avancer (13, 11, 8) ; 3 possède la formule du score |
-| Journal des lectures de ruine | Par lecture : id de ruine, faction, index de fragment, statut (en attente, validée) | 13 (voir règle 10) |
+| Journal des lectures de ruine | Par lecture : id de ruine, faction, **identifiant stable du fragment**, statut (en attente, validée) | 13 (voir règle 10) |
 | Journal des commandes | Numéro de la dernière commande appliquée, révision de l'état | 23 |
 
 Ne sont **pas** dans l'état : le revenu d'énergie et le score (calculés par 10 et 3 à
@@ -148,11 +148,16 @@ réglages : système 22), l'animation, la sélection et tout ce qui est purement
    indexée par tuile, des unités indexées par id), pour que la copie reste peu coûteuse.
 10. **Journal des lectures de ruine** (TD-SYSTEM-BOUNDARY, point 1). Quand une ruine est
     lue, la même commande ajoute au journal une entrée « en attente » (ruine, faction,
-    index de fragment) et marque la ruine lue ; le profil (22) est ensuite écrit ;
-    l'entrée passe alors à « validée ». Au chargement, une entrée encore en attente est
-    réconciliée : si le fragment est déjà dans le profil, l'entrée est validée ; sinon,
-    l'écriture du profil est rejouée (elle est idempotente par identifiant de fragment).
-    Une ruine n'apparaît jamais non lue alors que son fragment est compté.
+    identifiant stable du fragment — jamais une position dans le pool, qu'une mise à
+    jour du contenu pourrait décaler) et marque la ruine lue ; le profil (22) est
+    ensuite écrit ; l'entrée passe alors à « validée ». Au chargement, **chaque entrée
+    du journal, en attente ou validée**, est réconciliée : si le fragment est déjà dans
+    le profil, l'entrée est (ou reste) validée ; sinon, l'écriture du profil est rejouée
+    (elle est idempotente par identifiant de fragment). Les entrées validées sont aussi
+    vérifiées parce qu'un profil restauré par la sauvegarde automatique d'Android peut
+    être plus ancien que la partie (`design/gdd/profil-donnees-meta.md`, règle 1). Une
+    ruine n'apparaît jamais non lue alors que son fragment est compté, et un fragment
+    lu n'est jamais perdu.
 11. **Vue par faction.** Chaque faction, IA comprise, ne lit l'état qu'à travers sa vue
     filtrée par le brouillard (tuiles visibles et découvertes, tranche Visibilité de 5).
     L'IA ne voit pas ce que le joueur ne lui montre pas (décision du 2026-10-29 :
@@ -372,6 +377,9 @@ cas ; ce document en fixe seulement le contrat côté état.*
 - **Si l'entrée est « en attente » et que le fragment est absent du profil** : l'écriture
   du profil est rejouée (idempotente par identifiant de fragment), puis l'entrée passe à
   « validée ».
+- **Si l'entrée est « validée » mais que le fragment est absent du profil** (profil
+  restauré plus ancien que la partie) : l'écriture du profil est rejouée de la même
+  façon ; l'entrée reste « validée ».
 - **Si l'application est tuée pendant l'écriture d'une sauvegarde** : la sauvegarde
   précédente reste la référence ; l'état n'expose jamais une commande à moitié
   appliquée. Propriétaire de l'écriture atomique : 16.
@@ -579,7 +587,9 @@ injectées ; aucun accès fichier dans les tests unitaires.*
   doublé qui contient le fragment, **WHEN** la sauvegarde est rechargée, **THEN**
   l'entrée passe à « validée » et la ruine reste lue ; **GIVEN** le fragment absent,
   **THEN** l'écriture du profil est rejouée une fois ; deux rechargements successifs
-  donnent toujours exactement un fragment.
+  donnent toujours exactement un fragment ; **GIVEN** une entrée « validée » et un
+  profil doublé plus ancien qui ne contient pas le fragment, **WHEN** la sauvegarde est
+  rechargée, **THEN** le fragment est ajouté au profil.
 - **AC-X2** [I] — **GIVEN** la faction de l'IA, **WHEN** son module de décision
   s'exécute, **THEN** il ne reçoit que la vue filtrée par le brouillard ; une unité
   témoin cachée dans le brouillard ne change pas les commandes choisies.
