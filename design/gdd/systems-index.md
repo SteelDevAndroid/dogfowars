@@ -117,7 +117,7 @@ d'une information.
 | 20 | Audio (inferred) | Audio | Vertical Slice | Not Started | — | 19, 23 |
 | 21 | Génération procédurale de cartes | Core | Alpha | Not Started | — | 2, 7, 11, 13 |
 | 22 | Profil et données méta (inferred) | Persistence | MVP | Designed | design/gdd/profil-donnees-meta.md | — |
-| 23 | Commandes et événements (inferred) | Core | MVP | Not Started | — | 1 |
+| 23 | Commandes et événements (inferred) | Core | MVP | Designed | design/gdd/commandes-evenements.md | 1 |
 
 *Le HUD (17) est spécifié par une UX spec plutôt qu'un GDD ; son statut suit
 `/ux-review` (dernier verdict : NOT ASSESSED, 0 point bloquant, en attente de ces GDD).*
@@ -329,10 +329,10 @@ indépendants d'une même couche peuvent être conçus en parallèle.*
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 23 |
-| Design docs started | 3 (HUD, UX spec ; GDD 1 Modèle d'état de partie ; GDD 22 Profil et données méta) |
-| Design docs reviewed | 1 (HUD : `/ux-review` NOT ASSESSED, 0 point bloquant) ; GDD 1 et 22 en attente de `/design-review` |
+| Design docs started | 4 (HUD, UX spec ; GDD 1 Modèle d'état de partie ; GDD 22 Profil et données méta ; GDD 23 Commandes et événements) |
+| Design docs reviewed | 1 (HUD : `/ux-review` NOT ASSESSED, 0 point bloquant) ; GDD 1, 22 et 23 en attente de `/design-review` |
 | Design docs approved | 0 |
-| MVP systems designed | 2/18 |
+| MVP systems designed | 3/18 |
 | Vertical Slice systems designed | 0/4 |
 
 ---

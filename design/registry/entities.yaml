@@ -191,6 +191,22 @@ formulas:
     notes: "Retired IDs excluded. Chronicle (14) compares it to its 4/12 unlock threshold."
     added: 2026-10-29
     revised: ""
+  - name: t_cmd_max
+    status: active
+    source: design/gdd/commandes-evenements.md
+    referenced_by:
+      - design/gdd/commandes-evenements.md
+      - design/gdd/modele-etat-partie.md
+    variables:
+      - T_ai
+      - f_cmd
+      - C
+      - t_clone
+    output_range: [0, 2000]
+    expression: "T_ai * f_cmd / C - t_clone (ms)"
+    notes: "Budget to validate+apply one command for the AI (9). Provisional 0.3 ms; measure on the reference phone."
+    added: 2026-10-29
+    revised: ""
 
 # Example:
 #
@@ -285,6 +301,33 @@ constants:
       - design/gdd/profil-donnees-meta.md
     value: 262144
     unit: bytes (256 KB)
+    added: 2026-10-29
+    revised: ""
+  - name: EVENT_QUEUE_MAX
+    status: active
+    source: design/gdd/commandes-evenements.md
+    referenced_by:
+      - design/gdd/commandes-evenements.md
+    value: 256
+    unit: events
+    added: 2026-10-29
+    revised: ""
+  - name: N_REFUS_MAX
+    status: active
+    source: design/gdd/commandes-evenements.md
+    referenced_by:
+      - design/gdd/commandes-evenements.md
+    value: 32
+    unit: refused commands per AI turn
+    added: 2026-10-29
+    revised: ""
+  - name: T_FRAME
+    status: active
+    source: design/gdd/commandes-evenements.md
+    referenced_by:
+      - design/gdd/commandes-evenements.md
+    value: 33
+    unit: ms (one frame at 30 fps)
     added: 2026-10-29
     revised: ""
 

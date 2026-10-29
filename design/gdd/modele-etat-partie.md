@@ -166,6 +166,8 @@ réglages : système 22), l'animation, la sélection et tout ce qui est purement
 12. **Taille bornée.** L'état ne grandit pas sans limite : pas d'historique, pas de
     journal d'événements. Les bornes sont des constantes de ce document (voir Tuning
     Knobs) : 16 × 16 tuiles, 60 unités, 10 nœuds, et un plafond d'intentions par tour.
+    L'instantané qui permet d'annuler le dernier déplacement est une copie gardée
+    **hors de l'état** par les commandes (23), jamais sauvegardée.
 13. **Sérialisable sans perte.** L'état se sérialise et se recharge en un état égal
     (égalité profonde définie par ce système). L'en-tête porte un numéro de version du
     schéma ; un état d'une version plus ancienne est migré au chargement, un état d'une
@@ -189,7 +191,7 @@ sur la dernière phase sauvegardée.
 | Valeur stockée | Atteinte depuis | Déclencheur (propriétaire) | Ce qui doit être vrai |
 |---|---|---|---|
 | CRÉÉE | — | Nouvelle partie (3, avec la carte 2 ou le générateur 21) | Graine fixée, compteurs d'id à zéro, tour 0 |
-| PHASE_JOUEUR (tour n) | CRÉÉE, EXÉCUTION_ENNEMIE | Début du tour (3) | Revenu appliqué (10) ; copie de début de tour disponible |
+| PHASE_JOUEUR (tour n) | CRÉÉE, EXÉCUTION_ENNEMIE | Début du tour (3), par la commande interne COMMENCER_LE_TOUR (`design/gdd/commandes-evenements.md`) | Revenu appliqué (10) |
 | INTENTIONS_PUBLIÉES | PHASE_JOUEUR | Commande « fin du tour » (3) ; l'IA écrit ses intentions (9) | État complet et cohérent avant la sauvegarde |
 | EXÉCUTION_ENNEMIE | INTENTIONS_PUBLIÉES | 3 | Les intentions du tour précédent sont exécutées ou annulées (cible détruite ou déplacée, jamais redirigée) |
 | FIN_DE_TOUR | EXÉCUTION_ENNEMIE | 3 | Sauvegarde déclenchée (16) |
