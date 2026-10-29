@@ -1,0 +1,315 @@
+# Game World Entity Registry
+#
+# PURPOSE: Single source of truth for all named game-world facts that appear
+# in more than one document. Skills check this before writing new content to
+# detect cross-doc inconsistencies at authoring time.
+#
+# RULES:
+#   - Only register facts that cross system boundaries. Internal-only facts
+#     (a formula used in one GDD only) do NOT need to be registered.
+#   - Never delete entries — set status: deprecated instead.
+#   - When a value changes: update the value, set revised: to today's date,
+#     and add a comment with the old value and which GDD changed it.
+#   - source: is the authoritative GDD — the one that "owns" this fact.
+#     Other GDDs that reference it list themselves in referenced_by.
+#   - When a new GDD references an existing entry, append its path to
+#     referenced_by. Do not create a duplicate entry.
+#
+# WRITTEN BY: /design-system (Phase 5 — after GDD sections are approved)
+#             /consistency-check (when resolving conflicts)
+#             economy-designer, systems-designer (new cross-system entries,
+#               after asking)
+# READ BY:    /design-system (Phase 2 — before authoring begins, and after
+#               Section C/D writes to conflict-check new entities/formulas)
+#             /consistency-check (primary input — grep-first, GDD-second)
+#             /review-all-gdds (Phase 1 — baseline for Phase 2 checks)
+#             /design-review (Phase 1 — cross-doc facts, in place of sibling GDDs)
+#             /content-audit (Step 2 — planned named-content count)
+#             /balance-check (Phase 3 — intended constant/formula values)
+#             /propagate-design-change (Step 3 — downstream GDD impact via referenced_by)
+#             /asset-spec (named entities to write specs for)
+#             economy-designer, systems-designer (before authoring items,
+#               loot tables and formulas)
+#
+# SEARCH PATTERNS (for skills using Grep):
+#   All entity names:        Grep pattern="^  - name:" path="design/registry/entities.yaml"
+#   Specific entity:         Grep pattern="  - name: goblin" path="design/registry/entities.yaml"
+#   All items:               Grep pattern="^  - name:" path="design/registry/entities.yaml" (items section)
+#   What combat.md owns:     Grep pattern="source: design/gdd/combat.md"
+#   What inventory.md uses:  Grep pattern="design/gdd/inventory.md" -B 8
+#                            (referenced_by is a block list, so match the
+#                            path; referenced_by.*inventory never matches)
+#   All gold values:          Grep pattern="value_gold:"
+#   Deprecated entries:      Grep pattern="status: deprecated"
+#
+# FORMAT: YAML. Consistent indentation is critical for grep reliability.
+#   Sections: entities | items | formulas | constants
+#   Each entry: name, status, source, referenced_by[], attributes{}, added, revised
+#
+# LAYOUT: the one shape .claude/scripts/registry.sh reads. Each section is a
+#   key at column 0 holding a block list, or [] while it is empty. Each entry
+#   starts "- name: <name>" with the dash at column 2 (or 0, the same for every
+#   entry of a section); its fields sit two columns past the dash, and a deeper
+#   line belongs to the field above it. Quote a value that holds ": ". A line
+#   in any other shape is reported as unsupported layout, with its number.
+
+version: 1
+last_updated: "2026-10-29"
+
+# ─── ENTITIES ────────────────────────────────────────────────────────────────
+# Named game-world objects: enemies, NPCs, characters, factions, bosses.
+# Register an entity here when it appears in more than one GDD — e.g., an
+# enemy defined in combat.md that also drops items listed in inventory.md.
+#
+# Required fields: name, status, source, referenced_by, added
+# Attribute fields: any key stats that could appear in another GDD
+#   (health, damage, drops, faction, etc.)
+
+entities: []
+
+# Example (remove when first real entry is added):
+#
+# entities:
+#   - name: goblin
+#     status: active              # active | deprecated
+#     source: design/gdd/combat.md
+#     referenced_by:
+#       - design/gdd/combat.md
+#       - design/gdd/inventory.md
+#     health: 40
+#     damage: 8
+#     drops:
+#       - item: goblin_arm        # must match an entry in items section
+#         qty: 1
+#         drop_rate: 0.8          # 0.0–1.0
+#     added: 2026-03-26
+#     revised: ""
+
+
+# ─── ITEMS ───────────────────────────────────────────────────────────────────
+# Named collectables, equipment, consumables, crafting materials, currency.
+# Register an item when its name or value appears in more than one GDD.
+#
+# Required fields: name, status, source, referenced_by, added
+# Attribute fields: value_gold, weight, stackable, category, and any stat
+#   modifiers that another system (e.g., economy, crafting) might reference.
+
+items: []
+
+# Example:
+#
+# items:
+#   - name: goblin_arm
+#     status: active
+#     source: design/gdd/combat.md   # drop defined in combat GDD
+#     referenced_by:
+#       - design/gdd/combat.md
+#       - design/gdd/inventory.md    # inventory GDD lists its weight/stack rules
+#       - design/gdd/economy.md      # economy GDD references its sell price
+#     value_gold: 5
+#     weight: 1
+#     stackable: true
+#     category: crafting_material
+#     added: 2026-03-26
+#     revised: ""
+
+
+# ─── FORMULAS ────────────────────────────────────────────────────────────────
+# Named calculations with defined variables and output ranges.
+# Register a formula when its output feeds into another system's input,
+# or when another GDD references it by name.
+#
+# Required fields: name, status, source, referenced_by, variables[],
+#   output_range[min, max], added
+# Optional: expression (the actual formula), notes
+
+formulas:
+  - name: tile_index
+    status: active
+    source: design/gdd/modele-etat-partie.md
+    referenced_by:
+      - design/gdd/modele-etat-partie.md
+    variables:
+      - x
+      - y
+      - W
+    output_range: [0, 255]
+    expression: "y * W + x"
+    notes: "Out-of-bounds coordinates are refused, never clamped."
+    added: 2026-10-29
+    revised: ""
+  - name: draw
+    status: active
+    source: design/gdd/modele-etat-partie.md
+    referenced_by:
+      - design/gdd/modele-etat-partie.md
+    variables:
+      - seed
+      - counter
+      - n
+    output_range: [0, 65535]
+    expression: "hash32(seed, counter) mod n, then counter += 1"
+    notes: "Only source of randomness in a match. n in 1..MAX_DRAW_N. Hash fixed by ADR."
+    added: 2026-10-29
+    revised: ""
+  - name: stored_intentions_max
+    status: active
+    source: design/gdd/modele-etat-partie.md
+    referenced_by:
+      - design/gdd/modele-etat-partie.md
+    variables:
+      - INTENT_CAP
+      - INTENT_RETENTION_TURNS
+    output_range: [0, 120]
+    expression: "INTENT_CAP * INTENT_RETENTION_TURNS"
+    added: 2026-10-29
+    revised: ""
+  - name: next_fragment
+    status: active
+    source: design/gdd/profil-donnees-meta.md
+    referenced_by:
+      - design/gdd/profil-donnees-meta.md
+      - design/gdd/modele-etat-partie.md
+    variables:
+      - P_f
+      - C_f
+    output_range: [1, 12]
+    expression: "min(P_f minus C_f), or NONE when P_f is a subset of C_f"
+    notes: "Stable fragment ID the next ruin of faction f gives. Never stored. Read by Ruins (13)."
+    added: 2026-10-29
+    revised: ""
+  - name: chronicle_progress
+    status: active
+    source: design/gdd/profil-donnees-meta.md
+    referenced_by:
+      - design/gdd/profil-donnees-meta.md
+    variables:
+      - C_f
+      - P_f
+    output_range: [0, 12]
+    expression: "size of (C_f intersect P_f)"
+    notes: "Retired IDs excluded. Chronicle (14) compares it to its 4/12 unlock threshold."
+    added: 2026-10-29
+    revised: ""
+
+# Example:
+#
+# formulas:
+#   - name: damage_formula
+#     status: active
+#     source: design/gdd/combat.md
+#     referenced_by:
+#       - design/gdd/combat.md
+#       - design/gdd/progression.md   # progression GDD scales attack variable
+#     variables:
+#       - attack
+#       - defense
+#       - crit_chance
+#       - crit_multiplier
+#     output_range: [0, 999]
+#     expression: "max(0, attack - defense) * (1 + crit_chance * crit_multiplier)"
+#     notes: "Output feeds into health-system damage intake. Min is 0 (armour
+#       can absorb all damage). Max is uncapped in formula but tuning knob
+#       damage_cap in combat.md clamps at 999."
+#     added: 2026-03-26
+#     revised: ""
+
+
+# ─── CONSTANTS ───────────────────────────────────────────────────────────────
+# Named numerical values referenced across multiple systems.
+# Register a constant when it is defined in one GDD but another GDD must
+# agree with it (e.g., gold carry limit defined in economy but checked in
+# inventory, or base inventory slots defined in inventory but displayed in HUD).
+#
+# Required fields: name, status, source, referenced_by, value, unit, added
+
+constants:
+  - name: MAX_MAP_SIZE
+    status: active
+    source: design/gdd/modele-etat-partie.md
+    referenced_by:
+      - design/gdd/modele-etat-partie.md
+    value: 16
+    unit: tiles per side
+    added: 2026-10-29
+    revised: ""
+  - name: MAX_UNITS
+    status: active
+    source: design/gdd/modele-etat-partie.md
+    referenced_by:
+      - design/gdd/modele-etat-partie.md
+    value: 60
+    unit: units per match
+    added: 2026-10-29
+    revised: ""
+  - name: MAX_NODES
+    status: active
+    source: design/gdd/modele-etat-partie.md
+    referenced_by:
+      - design/gdd/modele-etat-partie.md
+    value: 10
+    unit: nodes per match
+    added: 2026-10-29
+    revised: ""
+  - name: INTENT_CAP
+    status: active
+    source: design/gdd/modele-etat-partie.md
+    referenced_by:
+      - design/gdd/modele-etat-partie.md
+    value: 60
+    unit: intentions per turn
+    added: 2026-10-29
+    revised: ""
+  - name: INTENT_RETENTION_TURNS
+    status: active
+    source: design/gdd/modele-etat-partie.md
+    referenced_by:
+      - design/gdd/modele-etat-partie.md
+    value: 2
+    unit: turns
+    added: 2026-10-29
+    revised: ""
+  - name: MAX_DRAW_N
+    status: active
+    source: design/gdd/modele-etat-partie.md
+    referenced_by:
+      - design/gdd/modele-etat-partie.md
+    value: 65536
+    unit: outcomes
+    added: 2026-10-29
+    revised: ""
+  - name: PROFILE_SIZE_CAP
+    status: active
+    source: design/gdd/profil-donnees-meta.md
+    referenced_by:
+      - design/gdd/profil-donnees-meta.md
+    value: 262144
+    unit: bytes (256 KB)
+    added: 2026-10-29
+    revised: ""
+
+# Example:
+#
+# constants:
+#   - name: gold_carry_limit
+#     status: active
+#     source: design/gdd/economy.md
+#     referenced_by:
+#       - design/gdd/economy.md
+#       - design/gdd/inventory.md   # inventory enforces the carry limit
+#       - design/gdd/ui.md          # HUD displays current gold vs limit
+#     value: 9999
+#     unit: gold
+#     added: 2026-03-26
+#     revised: ""
+#
+#   - name: base_inventory_slots
+#     status: active
+#     source: design/gdd/inventory.md
+#     referenced_by:
+#       - design/gdd/inventory.md
+#       - design/gdd/progression.md  # progression unlocks additional slots
+#     value: 20
+#     unit: slots
+#     added: 2026-03-26
+#     revised: ""
