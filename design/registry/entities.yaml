@@ -207,6 +207,36 @@ formulas:
     notes: "Budget to validate+apply one command for the AI (9). Provisional 0.3 ms; measure on the reference phone."
     added: 2026-10-29
     revised: ""
+  - name: chebyshev
+    status: active
+    source: design/gdd/carte-tuiles-terrain.md
+    referenced_by:
+      - design/gdd/carte-tuiles-terrain.md
+    variables:
+      - x1
+      - y1
+      - x2
+      - y2
+    output_range: [0, 15]
+    expression: "max(abs(x1 - x2), abs(y1 - y2))"
+    notes: "Distance on the 8-neighbour square grid. Used for ranges (6, 8), sight radius (5), map rules."
+    added: 2026-10-29
+    revised: ""
+  - name: path_cost
+    status: active
+    source: design/gdd/carte-tuiles-terrain.md
+    referenced_by:
+      - design/gdd/carte-tuiles-terrain.md
+      - design/gdd/commandes-evenements.md
+    variables:
+      - c(t)
+      - MP_left
+      - MP_max
+    output_range: [1, 765]
+    expression: "sum of entry costs (plain 1, forest 2, mountain 3, water impassable); reachable if cost <= MP_left, or one step with full MP (floor rule)"
+    notes: "Validates DÉPLACER (23). MP owned by units (6)."
+    added: 2026-10-29
+    revised: ""
 
 # Example:
 #
@@ -328,6 +358,15 @@ constants:
       - design/gdd/commandes-evenements.md
     value: 33
     unit: ms (one frame at 30 fps)
+    added: 2026-10-29
+    revised: ""
+  - name: MVP_MAP_SIZE
+    status: active
+    source: design/gdd/carte-tuiles-terrain.md
+    referenced_by:
+      - design/gdd/carte-tuiles-terrain.md
+    value: 12
+    unit: tiles per side (launch sizes 10 and 14)
     added: 2026-10-29
     revised: ""
 
