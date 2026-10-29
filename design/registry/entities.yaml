@@ -237,6 +237,25 @@ formulas:
     notes: "Validates DÉPLACER (23). MP owned by units (6)."
     added: 2026-10-29
     revised: ""
+  - name: final_score
+    status: active
+    source: design/gdd/tours-conditions-victoire.md
+    referenced_by:
+      - design/gdd/tours-conditions-victoire.md
+      - design/gdd/profil-donnees-meta.md
+    variables:
+      - T
+      - N
+      - sum_L
+      - P
+      - U
+      - F
+      - D
+    output_range: [0, 776]
+    expression: "w_t*T + w_n*N + w_l*sum_L + w_p*P + w_u*min(U, U_cap) + w_f*F + D"
+    notes: "Start weights 1, 8, 4, 10, 2, 60; U_cap 20. F = ruins read this match. D = 8 per turn left on domination. Best score submitted to the profile (22)."
+    added: 2026-10-29
+    revised: ""
 
 # Example:
 #
@@ -367,6 +386,35 @@ constants:
       - design/gdd/carte-tuiles-terrain.md
     value: 12
     unit: tiles per side (launch sizes 10 and 14)
+    added: 2026-10-29
+    revised: ""
+  - name: T_MAX
+    status: active
+    source: design/gdd/tours-conditions-victoire.md
+    referenced_by:
+      - design/gdd/tours-conditions-victoire.md
+      - design/ux/hud.md
+    value: 30
+    unit: turns per match
+    added: 2026-10-29
+    revised: ""
+  - name: LAST_TURNS_WARNING
+    status: active
+    source: design/gdd/tours-conditions-victoire.md
+    referenced_by:
+      - design/gdd/tours-conditions-victoire.md
+      - design/ux/hud.md
+    value: 5
+    unit: turns left
+    added: 2026-10-29
+    revised: ""
+  - name: W_RUIN
+    status: active
+    source: design/gdd/tours-conditions-victoire.md
+    referenced_by:
+      - design/gdd/tours-conditions-victoire.md
+    value: 60
+    unit: score points per ruin read (shown on the HUD ruin chip)
     added: 2026-10-29
     revised: ""
 

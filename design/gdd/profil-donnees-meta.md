@@ -599,7 +599,7 @@ fichier absent. Aucun accès fichier dans les tests unitaires.*
 |---|---|---|---|
 | Comment Godot règle-t-il l'inclusion des données dans la sauvegarde automatique d'Android, et le renommage de fichier est-il atomique sur Android ? (NOT SOURCEABLE) | engine-programmer | ADR de persistance | |
 | Notification du cycle de vie Android pour l'écriture de sécurité en arrière-plan (NOT SOURCEABLE) | engine-programmer | ADR de persistance | |
-| Une défaite ou un abandon donne-t-il un score enregistré ? La difficulté fait-elle partie de la clé du meilleur score ? | game-designer | GDD des tours (3) | |
+| Une défaite ou un abandon donne-t-il un score enregistré ? La difficulté fait-elle partie de la clé du meilleur score ? | game-designer | GDD des tours (3) | **Résolu le 2026-10-29** (`design/gdd/tours-conditions-victoire.md`, règle 14) : seule une partie finie par domination ou au 30e tour soumet un score ; la clé est (faction, difficulté) |
 | Langue de l'interface : réglage à stocker ici ? (aucun système de localisation n'est prévu) | user | Avant `/ux-design` des menus | |
 | Réglages par appareil ou partagés le jour d'une synchronisation en ligne ? | ux-designer | Avant la synchronisation en ligne (après le lancement) | |
 | Synchronisation en ligne (Google Play Games, iCloud) : à réévaluer après le lancement ; prise en charge par Godot NOT SOURCEABLE | producer | Après le palier de lancement | |

@@ -92,7 +92,7 @@ définit le sens de ses champs et les seules fonctions qui l'écrivent.
 | Ruines | Par id : position (tirée parmi des emplacements candidats), faction concernée, lue ou non | 13 (21 n'écrit que la mise en place initiale) |
 | Factions | Par faction : stock d'énergie, protocoles recherchés, recherche en cours, éliminée ou non | 10 (stock) ; 12 (protocoles) ; 3 (éliminée) |
 | Intentions | Par id : unité auteur, cible (id), tour d'annonce, tour d'exécution, statut (annoncée, exécutée, annulée), raison d'annulation (cible détruite, cible déplacée) | 9 |
-| Compteurs de score | Comptes bruts : fragments lus pendant la partie, nœuds tenus, unités détruites | Chaque compte a le système qui le fait avancer (13, 11, 8) ; 3 possède la formule du score |
+| Compteurs de score | Comptes bruts : ruines lues pendant la partie, nœuds tenus, unités détruites | Chaque compte a le système qui le fait avancer (13, 11, 8) ; 3 possède la formule du score |
 | Journal des lectures de ruine | Par lecture : id de ruine, faction, **identifiant stable du fragment**, statut (en attente, validée) | 13 (voir règle 10) |
 | Journal des commandes | Numéro de la dernière commande appliquée, révision de l'état | 23 |
 
@@ -191,16 +191,15 @@ sur la dernière phase sauvegardée.
 | Valeur stockée | Atteinte depuis | Déclencheur (propriétaire) | Ce qui doit être vrai |
 |---|---|---|---|
 | CRÉÉE | — | Nouvelle partie (3, avec la carte 2 ou le générateur 21) | Graine fixée, compteurs d'id à zéro, tour 0 |
-| PHASE_JOUEUR (tour n) | CRÉÉE, EXÉCUTION_ENNEMIE | Début du tour (3), par la commande interne COMMENCER_LE_TOUR (`design/gdd/commandes-evenements.md`) | Revenu appliqué (10) |
-| INTENTIONS_PUBLIÉES | PHASE_JOUEUR | Commande « fin du tour » (3) ; l'IA écrit ses intentions (9) | État complet et cohérent avant la sauvegarde |
-| EXÉCUTION_ENNEMIE | INTENTIONS_PUBLIÉES | 3 | Les intentions du tour précédent sont exécutées ou annulées (cible détruite ou déplacée, jamais redirigée) |
-| FIN_DE_TOUR | EXÉCUTION_ENNEMIE | 3 | Sauvegarde déclenchée (16) |
-| TERMINÉE (victoire, défaite, 30e tour, abandon) | toute phase | Contrôle de victoire (3) | Statut de fin posé ; l'état ne change plus |
+| PHASE_JOUEUR (tour n) | CRÉÉE, FIN_DE_TOUR | Début du tour (3), par la commande interne COMMENCER_LE_TOUR (`design/gdd/commandes-evenements.md`) | Revenu appliqué (10) |
+| EXÉCUTION_ENNEMIE | PHASE_JOUEUR | Commande « fin du tour » (3) | Les intentions du tour précédent sont exécutées ou annulées (cible détruite ou déplacée, jamais redirigée) ; puis l'IA joue ; puis elle **annonce** ses intentions du tour suivant (9), sauf au tour 30 |
+| FIN_DE_TOUR | EXÉCUTION_ENNEMIE | 3 | État complet et cohérent ; sauvegarde déclenchée (16) |
+| TERMINÉE (domination, défaite, 30e tour, abandon) | toute phase | Contrôle de fin de partie (3) | Statut de fin posé ; l'état ne change plus |
 
-*Provisoire : INTENTIONS_PUBLIÉES pourrait n'être qu'une étape interne de la fin de tour
-plutôt qu'une phase stockée. Le GDD des tours (3) tranche ; si c'est une étape, la ligne
-disparaît. Une sauvegarde au milieu de la résolution d'une commande est interdite : la
-sauvegarde sur pause enregistre le dernier état cohérent.*
+*Décidé dans `design/gdd/tours-conditions-victoire.md` : la publication des intentions
+est une étape de la fin de la phase ennemie, pas une phase stockée. Une sauvegarde au
+milieu de la résolution d'une commande est interdite : la sauvegarde sur pause
+enregistre le dernier état cohérent.*
 
 ### Interactions with Other Systems
 
@@ -220,7 +219,7 @@ provisoire**, à confirmer dans le GDD du système concerné.
 | 10 | Énergie | Nœuds, Factions | Stock d'énergie |
 | 11 | Nœuds | Carte, Factions | Nœuds ; propriétaire des tuiles (seul écrivain du territoire) ; compteur de nœuds tenus |
 | 12 | Arbre de protocoles | Factions | Protocoles recherchés, recherche en cours |
-| 13 | Ruines et fragments | Carte, Visibilité, Ruines, journal | Ruines, journal des lectures, compteur de fragments lus |
+| 13 | Ruines et fragments | Carte, Visibilité, Ruines, journal | Ruines, journal des lectures, compteur de ruines lues |
 | 14 | Chronique | — (lit le profil) | — |
 | 15 | Recoloration du monde | Propriétaire des tuiles | État de couleur des tuiles |
 | 16 | Sauvegarde automatique | Tout l'état | — (fichiers ; version du schéma lue) |
@@ -611,8 +610,7 @@ injectées ; aucun accès fichier dans les tests unitaires.*
 - Les règles 2 et 3 (« un système n'écrit jamais la tranche d'un autre ») ne se
   prouvent pas entièrement à l'exécution : AC-02 et AC-03 les échantillonnent, une
   vérification en revue de code ou par analyse statique les complète.
-- Aucun critère de transition entre phases tant que le GDD des tours (3) n'a pas
-  tranché le statut d'INTENTIONS_PUBLIÉES.
+- Les critères de transition entre phases sont dans `design/gdd/tours-conditions-victoire.md`.
 
 ## Open Questions
 
@@ -622,7 +620,7 @@ injectées ; aucun accès fichier dans les tests unitaires.*
 | Peut-on simuler l'IA hors du fil principal sur Android ? (NOT SOURCEABLE) ; repli prévu : travail réparti sur plusieurs images | engine-programmer | Prototype des intentions de l'IA (1 semaine, PR-SCOPE) | |
 | Ordre d'itération des Dictionary dans la version installée de Godot (NOT SOURCEABLE) ; la règle 8 l'évite, mais l'ADR doit le confirmer | gameplay-programmer | ADR de représentation | |
 | Comportement des entiers GDScript en cas de dépassement, pour le hachage du tirage (NOT SOURCEABLE) | gameplay-programmer | ADR du générateur de hasard | |
-| INTENTIONS_PUBLIÉES : phase stockée ou étape interne de la fin de tour ? | game-designer | GDD des tours (3) | |
+| INTENTIONS_PUBLIÉES : phase stockée ou étape interne de la fin de tour ? | game-designer | GDD des tours (3) | **Résolu le 2026-10-29** : étape de la fin de la phase ennemie, pas une phase stockée |
 | INTENT_CAP : une intention au plus par unité ennemie ? | game-designer, ai-programmer | GDD de l'IA (9) | |
 | Nombre de factions par partie (F) et de ruines par carte (R), qui fixent la taille maximale de l'état | game-designer | GDD des tours (3) et de la carte (2) | |
 | Comment l'IA se souvient-elle des unités vues puis perdues de vue, si elle ne voit que sa vue filtrée ? (mémoire propre à l'IA, hors de l'état ou dans sa tranche). Contrainte : cette mémoire ne contient que ce que la faction de l'IA a réellement vu, pour que la règle 11 tienne. La réponse décide si l'IA paraît « dure » ou distraite (CD-GDD-ALIGN) | ai-programmer | GDD de l'IA (9) | |

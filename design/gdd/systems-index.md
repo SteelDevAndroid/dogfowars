@@ -97,7 +97,7 @@ d'une information.
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | Modèle d'état de partie | Core | MVP | Designed | design/gdd/modele-etat-partie.md | — |
 | 2 | Carte en tuiles et terrain | Core | MVP | Designed | design/gdd/carte-tuiles-terrain.md | 1 |
-| 3 | Tours et conditions de victoire | Core | MVP | Not Started | — | 1 |
+| 3 | Tours et conditions de victoire | Core | MVP | Designed | design/gdd/tours-conditions-victoire.md | 1 |
 | 4 | Contrôles tactiles et caméra de carte (inferred) | Core | MVP | Not Started | — | 2, 23 |
 | 5 | Brouillard de guerre et vision | Gameplay | MVP | Not Started | — | 2, 6, 11 |
 | 6 | Unités drones | Gameplay | MVP | Not Started | — | 1, 2 |
@@ -329,10 +329,10 @@ indépendants d'une même couche peuvent être conçus en parallèle.*
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 23 |
-| Design docs started | 5 (HUD, UX spec ; GDD 1, 22, 23 et 2) |
-| Design docs reviewed | 1 (HUD : `/ux-review` NOT ASSESSED, 0 point bloquant) ; GDD 1, 22, 23 et 2 en attente de `/design-review` |
+| Design docs started | 6 (HUD, UX spec ; GDD 1, 22, 23, 2 et 3) |
+| Design docs reviewed | 1 (HUD : `/ux-review` NOT ASSESSED, 0 point bloquant) ; GDD 1, 22, 23, 2 et 3 en attente de `/design-review` |
 | Design docs approved | 0 |
-| MVP systems designed | 4/18 |
+| MVP systems designed | 5/18 |
 | Vertical Slice systems designed | 0/4 |
 
 ---

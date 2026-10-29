@@ -82,6 +82,7 @@ les tours (3) ou l'IA (9), que le joueur ne voit jamais.
 | RÉVEILLER | J, IA | unité qui réveille, drone endormi | AUCUN_DRONE_ADJACENT, ÉNERGIE_INSUFFISANTE (besoin, disponible), MEUTE_COMPLÈTE |
 | RECHERCHER | J, IA | protocole | PROTOCOLE_ACQUIS, RECHERCHE_EN_COURS, PRÉREQUIS_MANQUANT, ÉNERGIE_INSUFFISANTE |
 | FINIR_LE_TOUR | J | — | PAS_VOTRE_TOUR, COMMANDES_VERROUILLÉES |
+| ABANDONNER | J | — | PARTIE_TERMINÉE (après confirmation dans le menu pause, 18 ; `design/gdd/tours-conditions-victoire.md`) |
 | ANNULER_LE_DÉPLACEMENT | J | — | RIEN_À_ANNULER, DÉPLACEMENT_A_RÉVÉLÉ, AUTRE_ACTION_DEPUIS |
 | COMMENCER_LE_TOUR, ANNONCER_LES_INTENTIONS, EXÉCUTER_UNE_INTENTION | SYS | faction ou intention | — (contrôlées par 3 et 9) |
 
