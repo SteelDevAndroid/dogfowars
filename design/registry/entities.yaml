@@ -518,6 +518,66 @@ formulas:
     notes: "Deterministic greedy score; weights are data in assets/data/ai.*"
     added: 2026-10-30
     revised: ""
+  - name: stat_effective
+    status: active
+    source: design/gdd/arbre-protocoles.md
+    referenced_by:
+      - design/gdd/arbre-protocoles.md
+      - design/gdd/unites-drones.md
+      - design/gdd/combat.md
+      - design/gdd/reveil-drones.md
+      - design/gdd/brouillard-vision.md
+    variables:
+      - base
+      - mod_p
+      - min
+      - max
+    output_range: [0, 99]
+    expression: "clamp(base + sum(mod_p over acquired protocols, by ascending id), min, max)"
+    notes: "Pure accessor; effects are never stored; the faction is a parameter."
+    added: 2026-10-30
+    revised: ""
+  - name: fin_recherche
+    status: active
+    source: design/gdd/arbre-protocoles.md
+    referenced_by:
+      - design/gdd/arbre-protocoles.md
+    variables:
+      - tour_depart
+      - duree
+    output_range: [2, 30]
+    expression: "tour_depart + duree"
+    notes: "Research finishes at the start of that turn; one research at a time per faction."
+    added: 2026-10-30
+    revised: ""
+  - name: largeur_tuile_centiemes
+    status: active
+    source: design/gdd/hud-systeme.md
+    referenced_by:
+      - design/gdd/hud-systeme.md
+      - design/gdd/controles-tactiles-camera.md
+    variables:
+      - largeur_rectangle
+      - colonnes
+    output_range: [2983, 4475]
+    expression: "(100 * largeur_rectangle) div colonnes"
+    notes: "Hundredths of a point; minimum tile 3100 (31 pt)."
+    added: 2026-10-30
+    revised: ""
+  - name: instant_panneau_fragment
+    status: active
+    source: design/gdd/hud-systeme.md
+    referenced_by:
+      - design/gdd/hud-systeme.md
+      - design/gdd/ruines-fragments.md
+    variables:
+      - fin_onde
+      - DELAI_PANNEAU
+    output_range: [1000, 1400]
+    expression: "fin_onde + DELAI_PANNEAU"
+    notes: "Without a wave: end of the read + 400 ms."
+    added: 2026-10-30
+    revised: ""
   - name: draw
     status: active
     source: design/gdd/modele-etat-partie.md
@@ -1126,6 +1186,54 @@ constants:
       - design/gdd/ia-ennemie.md
     value: 20000
     unit: pure formula evaluations per AI turn
+    added: 2026-10-30
+    revised: ""
+  - name: PRIX_PROTOCOLES
+    status: active
+    source: design/gdd/arbre-protocoles.md
+    referenced_by:
+      - design/gdd/arbre-protocoles.md
+    value: "antennes:15, cellules_econes:20, marche_forcee:30, soins_campagne:15, plaques:25, pointes:35"
+    unit: energy to research (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: DUREE_PROTOCOLES
+    status: active
+    source: design/gdd/arbre-protocoles.md
+    referenced_by:
+      - design/gdd/arbre-protocoles.md
+    value: "2, 2, 3 turns per branch level"
+    unit: turns (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: CALENDRIER_PROTOCOLES_IA
+    status: active
+    source: design/gdd/arbre-protocoles.md
+    referenced_by:
+      - design/gdd/arbre-protocoles.md
+      - design/gdd/ia-ennemie.md
+    value: "plaques:12, pointes:18"
+    unit: AI turn at which the protocol is granted (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: DELAI_PANNEAU
+    status: active
+    source: design/gdd/hud-systeme.md
+    referenced_by:
+      - design/gdd/hud-systeme.md
+      - design/gdd/ruines-fragments.md
+    value: 400
+    unit: ms after the wave before the fragment panel
+    added: 2026-10-30
+    revised: ""
+  - name: DELAI_FERMETURE
+    status: active
+    source: design/gdd/hud-systeme.md
+    referenced_by:
+      - design/gdd/hud-systeme.md
+      - design/gdd/ruines-fragments.md
+    value: 500
+    unit: ms before Continuer is accepted
     added: 2026-10-30
     revised: ""
 
