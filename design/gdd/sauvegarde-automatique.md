@@ -130,7 +130,7 @@ sont renvoyés à l'ADR de persistance.*
     sauvegardée ; le profil enregistre le fragment et est écrit ; l'entrée passe à
     « validée » en mémoire. **Le panneau de fragment n'apparaît qu'une fois l'écriture
     de la partie terminée** (CD-GDD-ALIGN) : le joueur ne voit jamais un fragment qu'un
-    arrêt pourrait effacer. L'écriture (environ 20 ms) est masquée par le délai de
+    arrêt pourrait effacer. (GDD SYNC, ADR-0006 : l'écriture de la partie est **synchrone** sur le fil principal ; ces 20 ms ne sont masquées par le délai de 400 ms qu'en asynchrone, et en synchrone ils retardent le début de l'onde et dépassent le budget de 8 ms de la règle 7 : à mesurer, AC-F1.) L'écriture (environ 20 ms) est masquée par le délai de
     400 ms qui précède déjà le panneau, le temps de la recoloration
     (`design/ux/hud.md`). Aucune écriture supplémentaire de la partie n'est nécessaire :
     la réconciliation au chargement est idempotente. L'ordre « partie d'abord » est le
@@ -274,7 +274,7 @@ mémoire. La rotation en copie de secours est un renommage, sans octet en plus.
 
 The integrity formula is defined as:
 
-`integrity = CRC32(payload_bytes)`
+`integrity = SHA-256(préfixe ‖ payload_bytes)` (32 octets, `HashingContext`, ADR-0006 ; l'empreinte est **en fin d'enveloppe**, pas dans l'en-tête)
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
@@ -283,7 +283,7 @@ The integrity formula is defined as:
 | integrity | int | 0..4 294 967 295 | calculated | Stockée dans l'en-tête, comparée au chargement |
 
 **Output Range:** un entier de 32 bits. Détecte une corruption accidentelle, pas une
-modification volontaire. Un CRC32 natif dans le moteur : NOT SOURCEABLE ; l'ADR choisit,
+modification volontaire. `HashingContext` n'offre pas de CRC32 : l'ADR-0006 retient SHA-256, algorithme normalisé (46 µs pour 8 Ko sur PC) ; l'ADR choisit,
 mais l'empreinte ne doit pas dépendre d'une fonction dont la stabilité entre versions du
 moteur n'est pas garantie.
 **Example:** une charge utile donne 0x9AE0DAAF ; elle est stockée, relue et comparée ; un

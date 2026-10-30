@@ -199,6 +199,28 @@ state_ownership:
     added: 2026-10-30
     revised: ""
 
+  - state: save_files
+    status: active
+    owner_system: save-store
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    interface: "user://match.sav, match.bak, profile.sav, profile.bak : écrits par SaveStore seulement (écrivain unique, synchrone) ; jamais d'accès direct par un autre système"
+    write_access: save-store-only
+    referenced_by:
+      - docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: profile_data
+    status: active
+    owner_system: profile-system
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    interface: "Profil (GDD 22) : chronique, déblocages, meilleurs scores, réglages ; écrit par le système 22 via ProfileStore.request_write() puis SaveStore ; copies de simulation : port nul"
+    write_access: profile-system-only
+    referenced_by:
+      - docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+    revised: ""
+
   - state: command_gate
     status: active
     owner_system: command-gate
@@ -356,6 +378,16 @@ performance_budgets:
     added: 2026-10-30
     revised: ""
 
+  - system: save-main-thread
+    status: active
+    budget_ms: 8.0
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    notes: "Provisoire (SAVE_MAIN_THREAD_BUDGET du GDD 16) : sérialisation plus vérification plus E/S au plus 8 ms **en pic sur l'image du commit**, distinct des budgets par image ; mesurer t_write sur l'appareil de référence (non nommé) ; sinon fil d'écriture par amendement"
+    referenced_by:
+      - docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+    revised: ""
+
   - system: ai-runner-frame
     status: active
     budget_ms: 2.0
@@ -417,9 +449,20 @@ performance_budgets:
 # make a different choice for the same purpose without knowing this was decided.
 
 api_decisions:
+  - purpose: save_file_format
+    status: active
+    api: "enveloppe binaire à préfixe figé (marque, version d'enveloppe, longueur, schéma de contenu, révision) + charge utile + SHA-256 (HashingContext) ; quatre fichiers sous user:// ; écriture *.tmp → relecture vérifiée → rotation → renommage via FileStore ; chargement courant puis .bak seulement"
+    not: "JSON ou ConfigFile en sauvegarde de production, ResourceSaver, CRC32 maison, promotion d'un .tmp, FileAccess ou DirAccess hors FileStore, écriture sur un autre fil sans amendement"
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    reason: "Mesuré : var_to_bytes seul accepte 23 % des octets altérés ; rename supprime la cible avant de déplacer sur Windows ; SHA-256 46 µs pour 8 Ko"
+    referenced_by:
+      - docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+    revised: ""
+
   - purpose: game_state_representation
     status: active
-    api: "colonnes PackedInt32Array / PackedByteArray (PackedInt64Array pour l'en-tête), duplicate() par colonne, var_to_bytes sans objets enveloppé d'une taille et d'une empreinte"
+    api: "colonnes PackedInt32Array / PackedByteArray (PackedInt64Array pour l'en-tête), duplicate() par colonne, var_to_bytes sans objets (charge utile seule ; enveloppe et empreinte : ADR-0006)"
     not: "objets RefCounted par entité, Dictionary / Array imbriqués, Resource, JSON en sauvegarde de production, bytes_to_var_with_objects"
     adr: docs/architecture/adr-0003-etat-de-partie.md
     reason: "Mesuré : copie 15 µs contre 284 µs (Dictionary) et 711 µs (objets), aller-retour var 59 µs ; var_to_bytes seul accepte 23 % des corruptions d'un octet"
@@ -604,5 +647,26 @@ forbidden_patterns:
     description: "Le runner d'IA ne déclenche jamais de sauvegarde et ne référence aucune classe de Presentation ; il passe par PacingGate."
     why: "Aucune sauvegarde pendant la phase ennemie (GDD 16, règle 9) ; sens de dépendance Core vers Presentation (ADR-0002)."
     adr: docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-10-30
+
+  - pattern: file_access_outside_filestore
+    status: active
+    description: "FileAccess et DirAccess ne sont appelés que dans l'implémentation réelle de FileStore."
+    why: "Les pannes doivent pouvoir être injectées à chaque étape ; un seul écrivain en série."
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+
+  - pattern: match_save_during_enemy_phase
+    status: active
+    description: "La partie n'est jamais sauvegardée pendant la phase ennemie, hors fin de partie et abandon ; le profil continue d'être écrit."
+    why: "Règle 9 du GDD 16 : le tour d'IA est rejoué depuis son début après un arrêt."
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+
+  - pattern: promote_tmp_file
+    status: active
+    description: "Un fichier .tmp n'est jamais promu en fichier courant au chargement, même valide ; les .tmp restants sont supprimés."
+    why: "Une partie abandonnée ne doit pas ressusciter après un arrêt entre deux suppressions."
+    adr: docs/architecture/adr-0006-sauvegarde.md
     added: 2026-10-30
 
