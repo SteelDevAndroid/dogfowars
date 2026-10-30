@@ -71,6 +71,7 @@ entities:
     source: design/gdd/unites-drones.md
     referenced_by:
       - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
     camp: pack
     health: 6
     attack: 1
@@ -88,6 +89,7 @@ entities:
     source: design/gdd/unites-drones.md
     referenced_by:
       - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
     camp: pack
     health: 8
     attack: 3
@@ -105,6 +107,7 @@ entities:
     source: design/gdd/unites-drones.md
     referenced_by:
       - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
     camp: pack
     health: 14
     attack: 1
@@ -122,6 +125,7 @@ entities:
     source: design/gdd/unites-drones.md
     referenced_by:
       - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
     camp: pack
     health: 7
     attack: 1
@@ -139,6 +143,7 @@ entities:
     source: design/gdd/unites-drones.md
     referenced_by:
       - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
     camp: gardien
     health: 10
     attack: 0
@@ -156,6 +161,7 @@ entities:
     source: design/gdd/unites-drones.md
     referenced_by:
       - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
     camp: gardien
     health: 8
     attack: 3
@@ -173,6 +179,7 @@ entities:
     source: design/gdd/unites-drones.md
     referenced_by:
       - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
     camp: gardien
     health: 14
     attack: 2
@@ -277,6 +284,7 @@ formulas:
     source: design/gdd/unites-drones.md
     referenced_by:
       - design/gdd/unites-drones.md
+      - design/gdd/combat.md
     variables:
       - pv_avant
       - delta
@@ -311,6 +319,81 @@ formulas:
     output_range: [0, 99]
     expression: "apres = min(avant + montant, ENERGIE_MAX); surplus_perdu = avant + montant - apres"
     notes: "Surplus is lost, never refused. Only the turn-start income credits at MVP."
+    added: 2026-10-30
+    revised: ""
+  - name: owner_of_tile
+    status: active
+    source: design/gdd/noeuds.md
+    referenced_by:
+      - design/gdd/noeuds.md
+    variables:
+      - RAYON_NIVEAU
+      - niveau
+      - distance
+    output_range: [0, 3]
+    expression: "node tile -> node owner; else nearest owned node in range (Chebyshev <= RAYON_NIVEAU[level]); tie keeps current owner, else lowest node id; none in range -> neutral"
+    notes: "Only system 11 writes tile owners. Full recompute after any node write; fixed point."
+    added: 2026-10-30
+    revised: ""
+  - name: territory_size
+    status: active
+    source: design/gdd/noeuds.md
+    referenced_by:
+      - design/gdd/noeuds.md
+    variables:
+      - x
+      - y
+      - R
+      - W
+      - H
+    output_range: [4, 49]
+    expression: "(min(x+R, W-1) - max(x-R, 0) + 1) * (min(y+R, H-1) - max(y-R, 0) + 1)"
+    notes: "Tiles of one isolated node clipped at the borders, before overlap."
+    added: 2026-10-30
+    revised: ""
+  - name: defense_eff
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+    variables:
+      - DEF
+      - DEF_PER_TILE_CLASS
+      - tile_class
+    output_range: [0, 4]
+    expression: "DEF + DEF_PER_TILE_CLASS * tile_class"
+    notes: "Defence of the defender's type plus the tile class of the defender's tile."
+    added: 2026-10-30
+    revised: ""
+  - name: damage
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+    variables:
+      - DMG_SCALE
+      - DEF_BASE
+      - ATQ
+      - PV_att
+      - PV_max_att
+      - defense_eff
+    output_range: [0, 6]
+    expression: "0 if ATQ = 0 else max(DMG_MIN, (DMG_SCALE*DEF_BASE*ATQ*PV_att) // (PV_max_att*(DEF_BASE+defense_eff)))"
+    notes: "Integer division. Proportional to the striker's remaining HP. Deterministic, no draw. Retaliation uses the same formula."
+    added: 2026-10-30
+    revised: ""
+  - name: sight_field
+    status: active
+    source: design/gdd/brouillard-vision.md
+    referenced_by:
+      - design/gdd/brouillard-vision.md
+    variables:
+      - rayon
+      - terrain
+      - bloquee
+    output_range: [1, 121]
+    expression: "T visible from V iff cheb(V,T) <= rayon + [V on mountain] and not blocked(V,T)"
+    notes: "blocked() is the map GDD formula 3 (Bresenham, only mountains block). Node sources use max(2, territory radius). Union over a faction's sources."
     added: 2026-10-30
     revised: ""
   - name: draw
@@ -502,6 +585,7 @@ constants:
     source: design/gdd/modele-etat-partie.md
     referenced_by:
       - design/gdd/modele-etat-partie.md
+      - design/gdd/noeuds.md
     value: 10
     unit: nodes per match
     added: 2026-10-29
@@ -704,6 +788,91 @@ constants:
       - design/gdd/energie.md
     value: "1:3, 2:4, 3:5"
     unit: energy per turn per owned node, by node level (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: RAYON_NIVEAU
+    status: active
+    source: design/gdd/noeuds.md
+    referenced_by:
+      - design/gdd/noeuds.md
+    value: "1:1, 2:2, 3:3"
+    unit: tiles (Chebyshev radius of a node's territory, by level; proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: PRIX_MONTEE
+    status: active
+    source: design/gdd/noeuds.md
+    referenced_by:
+      - design/gdd/noeuds.md
+      - design/gdd/energie.md
+    value: "1:12, 2:20"
+    unit: energy to raise a node from level n to n+1 (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: NIVEAU_MAX
+    status: active
+    source: design/gdd/noeuds.md
+    referenced_by:
+      - design/gdd/noeuds.md
+      - design/gdd/energie.md
+    value: 3
+    unit: maximum node level
+    added: 2026-10-30
+    revised: ""
+  - name: DMG_SCALE
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+    value: 2
+    unit: damage scale factor (integer; 3 breaks the balance; proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: DEF_BASE
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+    value: 4
+    unit: pivot of the defence damping (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: DMG_MIN
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+    value: 1
+    unit: minimum damage of a hit when ATQ > 0
+    added: 2026-10-30
+    revised: ""
+  - name: DEF_PER_TILE_CLASS
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+      - design/gdd/carte-tuiles-terrain.md
+    value: 1
+    unit: defence per tile defence class (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: NODE_VISION_MIN
+    status: active
+    source: design/gdd/brouillard-vision.md
+    referenced_by:
+      - design/gdd/brouillard-vision.md
+    value: 2
+    unit: tiles (minimum vision radius of an owned node; level 3 uses its territory radius)
+    added: 2026-10-30
+    revised: ""
+  - name: MOUNTAIN_VISION_BONUS
+    status: active
+    source: design/gdd/brouillard-vision.md
+    referenced_by:
+      - design/gdd/brouillard-vision.md
+      - design/gdd/carte-tuiles-terrain.md
+    value: 1
+    unit: tiles (extra vision radius for a source standing on a mountain)
     added: 2026-10-30
     revised: ""
 

@@ -99,13 +99,13 @@ d'une information.
 | 2 | Carte en tuiles et terrain | Core | MVP | Designed | design/gdd/carte-tuiles-terrain.md | 1 |
 | 3 | Tours et conditions de victoire | Core | MVP | Designed | design/gdd/tours-conditions-victoire.md | 1 |
 | 4 | Contrôles tactiles et caméra de carte (inferred) | Core | MVP | Designed | design/gdd/controles-tactiles-camera.md | 2, 23 |
-| 5 | Brouillard de guerre et vision | Gameplay | MVP | Not Started | — | 2, 6, 11 |
+| 5 | Brouillard de guerre et vision | Gameplay | MVP | Designed | design/gdd/brouillard-vision.md | 2, 6, 11 |
 | 6 | Unités drones | Gameplay | MVP | Designed | design/gdd/unites-drones.md | 1, 2 |
 | 7 | Réveil des drones | Gameplay | MVP | Not Started | — | 6, 10 |
-| 8 | Combat | Gameplay | MVP | Not Started | — | 2, 6 |
+| 8 | Combat | Gameplay | MVP | Designed | design/gdd/combat.md | 2, 6 |
 | 9 | IA ennemie à intentions | Gameplay | MVP | Not Started | — | 3, 5, 6, 7, 8, 10, 11, 12, 23 |
 | 10 | Énergie | Economy | MVP | Designed | design/gdd/energie.md | 1, 3 |
-| 11 | Nœuds | Economy | MVP | Not Started | — | 2, 10 |
+| 11 | Nœuds | Economy | MVP | Designed | design/gdd/noeuds.md | 2, 10 |
 | 12 | Arbre de protocoles | Progression | MVP | Not Started | — | 6, 10 |
 | 13 | Ruines et fragments | Narrative | MVP | Not Started | — | 2, 5, 11, 15, 22 |
 | 14 | Chronique et progression méta | Narrative | Vertical Slice | Not Started | — | 13, 22 |
@@ -329,10 +329,10 @@ indépendants d'une même couche peuvent être conçus en parallèle.*
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 23 |
-| Design docs started | 10 (HUD, UX spec ; GDD 1, 22, 23, 2, 3, 16, 4, 6 et 10) |
-| Design docs reviewed | 1 (HUD : `/ux-review` NOT ASSESSED, 0 point bloquant) ; GDD 1, 22, 23, 2, 3, 16, 4, 6 et 10 en attente de `/design-review` |
+| Design docs started | 13 (HUD, UX spec ; GDD 1, 22, 23, 2, 3, 16, 4, 6, 10, 11, 8 et 5) |
+| Design docs reviewed | 1 (HUD : `/ux-review` NOT ASSESSED, 0 point bloquant) ; GDD 1, 22, 23, 2, 3, 16, 4, 6, 10, 11, 8 et 5 en attente de `/design-review` |
 | Design docs approved | 0 |
-| MVP systems designed | 9/18 |
+| MVP systems designed | 12/18 |
 | Vertical Slice systems designed | 0/4 |
 
 ---

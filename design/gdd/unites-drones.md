@@ -155,7 +155,9 @@ sont des **valeurs de départ [PROP]**, à jouer en test (voir Tuning Knobs).*
    `REST_HEAL` = 2 PV, plus `NODE_REST_BONUS` = 2 si la tuile est un nœud possédé par sa faction
    (propriétaire lu chez 11, indépendant du niveau du nœud). Il passe par « modifier les PV »,
    plafonné à PV_max. Une unité endormie ne se soigne pas ; une unité réveillée ce tour-là a
-   les deux drapeaux à vrai (règle 8) et ne se soigne donc pas au tour suivant.
+   les deux drapeaux à vrai (règle 8) et ne se soigne donc pas au tour suivant. **Une unité qui porte une
+   intention d'attaque annoncée ne se soigne pas** (décision du 2026-10-30, gate du combat) : les
+   dégâts d'une attaque annoncée ne dépendent ainsi pas d'un soin survenu entre l'annonce et l'exécution.
 7. **Capturer.** Seuls l'**Ouvrier** (meute) et le **Bastion** (Gardiens) peuvent CAPTURER
    (décision du 2026-10-30 : sans cela l'IA ne pourrait jamais s'étendre) ; tout autre type est
    refusé avec `TYPE_NON_CAPABLE` (à ajouter à 23). L'unité doit être sur la tuile du nœud au
@@ -301,7 +303,7 @@ nœud possédé : min(4, 5) = 4, soit 7/8. Assaut 7/8 hors nœud : min(2, 1) = 1
 
 The au_repos predicate is defined as:
 
-`au_repos = (¬endormie) ∧ (¬a_bougé) ∧ (¬a_agi)`, évalué au début du tour de la faction,
+`au_repos = (¬endormie) ∧ (¬a_bougé) ∧ (¬a_agi) ∧ (¬intention_annoncée)`, évalué au début du tour de la faction,
 **avant** la remise à zéro (`tours-conditions-victoire.md`, §2).
 
 **Variables:**
