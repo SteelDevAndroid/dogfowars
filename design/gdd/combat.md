@@ -499,7 +499,7 @@ Les durées sont des propositions dans la plage de 150 à 300 ms de la section 7
   l'attention (art bible, « Animation »).
 - **Le coup est une phrase, non une explosion.** Aucun écran qui tremble, aucun effet de particules : le
   poids vient du chiffre qui monte et de la jauge qui descend.
-- **Commandes verrouillées environ 1,5 s** pendant la résolution (`design/ux/hud.md`, section 11), puis le
+- **Commandes verrouillées `ATTACK_LOCK_MS` = 1 600 ms** (`commandes-evenements.md`, règle 12 ; l'animation dure environ 1,5 s) pendant la résolution (`design/ux/hud.md`, section 11), puis le
   panneau d'unité revient avec les PV à jour.
 - **Aucune surprise** : le résultat est exactement celui de l'aperçu ; si l'IA ne tire aucun dé, le
   joueur ne doit jamais se demander pourquoi un coup a porté.

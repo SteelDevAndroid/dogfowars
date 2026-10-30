@@ -55,6 +55,21 @@ sed -i '1d' "$t/src/core/state/units_slice.gd"
 expect "slice without an owner line is refused" 2 "$t"
 rm -rf "$t"
 
+t=$(mktemp -d); mk "$t"
+printf 'extends GutTest\nfunc test_x(): UnitsSlice.new()._hp[0] = 5\n' > "$t/tests/test_write.gd"
+expect "tests may not write private fields" 1 "$t"
+rm -rf "$t"
+
+t=$(mktemp -d); mk "$t"
+printf 'class_name Dyn\nstatic func f(s: UnitsSlice) -> void:\n\ts.set("_hp", PackedInt32Array())\n' > "$t/src/core/combat/dyn.gd"
+expect "dynamic set of a private field is refused" 1 "$t"
+rm -rf "$t"
+
+t=$(mktemp -d); mk "$t"
+printf '# owner: src/core/nodes/ src/core/state/\nclass_name NodesSlice\nextends RefCounted\nvar _hp: PackedInt32Array\n' > "$t/src/core/state/nodes_slice.gd"
+expect "same private name in two slices is refused" 2 "$t"
+rm -rf "$t"
+
 t=$(mktemp -d)
 expect "no code root" 0 "$t"
 rm -rf "$t"

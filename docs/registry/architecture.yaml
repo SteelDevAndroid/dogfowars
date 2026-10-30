@@ -294,7 +294,7 @@ interfaces:
     consumers:
       - command-pipeline
     adr: docs/architecture/adr-0004-pipeline-de-commandes.md
-    signal_signature: "CommandPipeline.submit(command) -> ValidationResult ; check(command) -> ValidationResult ; preview(command) -> PreviewResult ; apply_on(copy, command, collector) -> ValidationResult"
+    signal_signature: "CommandPipeline.submit(command) -> ValidationResult ; check(command) -> ValidationResult ; preview(command) -> PreviewResult ; apply_on(copy, command) -> ValidationResult"
     referenced_by:
       - docs/architecture/adr-0004-pipeline-de-commandes.md
     added: 2026-10-30
@@ -358,11 +358,17 @@ interfaces:
 # The registry lets /architecture-review verify the total doesn't exceed the target.
 
 performance_budgets:
+  - target_fps: 60
+    total_frame_budget_ms: 16.6
+    platform: Mobile
+    notes: "Cible de la revue du 2026-10-30 (M6) ; le pire pic d'un commit du joueur (1 + 0,3 + 0,3 + 8 ms) tient, pas avec 20 ms d'écriture synchrone (ADR-0006, AC-F1)"
+    added: 2026-10-30
+
   - system: game-state-copy
     status: active
     budget_ms: 0.2
     adr: docs/architecture/adr-0003-etat-de-partie.md
-    notes: "Copie plus première écriture au plus 200 µs sur l'appareil de référence (500 ms ÷ 2 500 copies, formule 5 du GDD 1) ; mesuré 15 µs (copie seule) sur PC, Android non mesuré ; si dépassé, revoir le budget de l'IA, pas la représentation"
+    notes: "COÛT UNITAIRE par copie, pas un budget d'image : copie plus première écriture au plus 200 µs sur l'appareil de référence (500 ms ÷ 2 500 copies, formule 5 du GDD 1) ; mesuré 15 µs (copie seule) sur PC, Android non mesuré ; si dépassé, revoir le budget de l'IA, pas la représentation"
     referenced_by:
       - docs/architecture/adr-0003-etat-de-partie.md
     added: 2026-10-30
@@ -392,7 +398,7 @@ performance_budgets:
     status: active
     budget_ms: 2.0
     adr: docs/architecture/adr-0005-ia-ennemie.md
-    notes: "Proposé : pire image du runner au plus 2 ms (une unité par image, copies filtrées comprises) ; comptages 2 500 copies et 20 000 évaluations par tour ; T_ai 2 000 ms est une cible mesurée, jamais une coupure ; aucun appareil de référence nommé"
+    notes: "Proposé : coût du runner sur le FIL PRINCIPAL au plus 2 ms par image (perception, soumission, interrogation de la tâche) ; la planification tourne sur WorkerThreadPool (ADR-0005 §7, revue B1) et n'y compte pas ; budget par appel à plan_next ; comptages 2 500 copies et 20 000 évaluations par tour ; T_ai 2 000 ms est une cible mesurée, jamais une coupure ; aucun appareil de référence nommé"
     referenced_by:
       - docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
@@ -638,14 +644,14 @@ forbidden_patterns:
   - pattern: ai_state_outside_state
     status: active
     description: "Aucun état d'IA (rôle, piste, siège, poste) hors des tranches de l'état : ni dans un Node, ni dans un script d'unité, ni dans une variable globale ; l'état du runner et AiBudget sont transitoires et jamais sauvegardés."
-    why: "Copie, sauvegarde et rejeu emportent l'état ; le tour d'IA est rejoué depuis le début de la phase."
+    why: "Copie, sauvegarde et rejeu emportent l'état ; la phase ennemie reprend à la commande suivante depuis l'état seul (sauvegarde après chaque commande)."
     adr: docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
 
   - pattern: runner_saves_or_references_presentation
     status: active
     description: "Le runner d'IA ne déclenche jamais de sauvegarde et ne référence aucune classe de Presentation ; il passe par PacingGate."
-    why: "Aucune sauvegarde pendant la phase ennemie (GDD 16, règle 9) ; sens de dépendance Core vers Presentation (ADR-0002)."
+    why: "Seul le PostCommitPort sauvegarde, après chaque commande (GDD 16, règle 9) ; sens de dépendance Core vers Presentation (ADR-0002)."
     adr: docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
 
@@ -660,7 +666,8 @@ forbidden_patterns:
     status: active
     description: "Le prochain coup de l'IA se décide à partir de l'état seul (agents, intentions, pistes, curseur_ia, drapeaux d'unités) ; la partie est sauvegardée après chaque commande de l'IA et la phase reprend à la commande suivante."
     why: "Décision du 2026-10-30 (PR #3, GDD 16 règle 9) : un arrêt en plein tour d'IA ne perd au plus que la commande en cours."
-    adr: docs/architecture/adr-0006-sauvegarde.md
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    revised: 2026-10-30
     added: 2026-10-30
 
   - pattern: promote_tmp_file
@@ -670,3 +677,9 @@ forbidden_patterns:
     adr: docs/architecture/adr-0006-sauvegarde.md
     added: 2026-10-30
 
+  - pattern: ai_planner_touches_scene_or_pipeline
+    status: active
+    description: "La tâche de planification de l'IA (WorkerThreadPool) ne touche ni l'arbre de scène, ni un nœud, ni l'état réel, ni l'instance de CommandPipeline ; elle n'appelle que la RuleTable sans état sur une copie qu'elle possède."
+    why: "Revue du 2026-10-30 (B1) : la planification sort du fil principal ; le déterminisme exige une fonction des entrées seules."
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-10-30

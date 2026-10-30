@@ -155,8 +155,8 @@ l'écriture réussit, applique la commande interne VALIDER_LA_LECTURE.
 12. **Verrouillage des commandes du joueur.** Une commande d'une faction est refusée avec
     PAS_VOTRE_TOUR hors de sa phase, et avec PARTIE_TERMINÉE après la fin de la partie.
     Une commande du joueur est refusée avec COMMANDES_VERROUILLÉES pendant le verrou de
-    résolution d'une attaque du HUD (durée lue dans les réglages du HUD, environ
-    1,6 s) ; ce verrou ne touche ni l'IA ni les commandes internes.
+    résolution d'une attaque du HUD (durée `ATTACK_LOCK_MS` = 1 600 ms, valeur unique en données,
+    propriété de ce document ; l'animation dure environ 1,5 s et le verrou la dépasse de 100 ms) ; ce verrou ne touche ni l'IA ni les commandes internes.
 13. **Les changements de tour passent aussi par des commandes.** Le début d'un tour, la
     publication des intentions de l'IA et l'exécution d'une intention sont des
     commandes internes : chacun reçoit une révision et ses événements, comme toute

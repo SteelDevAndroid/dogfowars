@@ -34,7 +34,7 @@ Les commandes publient leurs événements en lots dans une file explicite, par u
 | **Depends On** | ADR-0003 `docs/architecture/adr-0003-etat-de-partie.md` (déclare `StateView`, interface de lecture seule ; couche Foundation) — doit être Accepted avant l'acceptation de celui-ci |
 | **Enables** | ADR-0001 (rendu des tuiles) ; ADR audio ; ADR de composition des couches de présentation |
 | **Blocks** | Stories du séquenceur, de l'horloge, du HUD (distribution) et de la présentation de la recoloration. Les stories Logic de `EventQueue`, `EventSink` et de la fusion peuvent démarrer |
-| **Ordering Note** | À accepter **avant** ADR-0001. Les stories Core du pipeline de commandes attendent aussi l'ADR du modèle d'état. `StateView` est ici une **interface abstraite en lecture seule** ; l'ADR du modèle d'état l'implémentera |
+| **Ordering Note** | À accepter **après** ADR-0003 (qui déclare `StateView`) et **avant** ADR-0001. `StateView` est ici une **interface abstraite en lecture seule** ; ADR-0003 la déclare et l'implémente |
 
 ## Context
 
@@ -115,7 +115,7 @@ func enter_dispatch() -> void
 func exit_dispatch() -> void
 func lock(reason: StringName) -> void               # faction du joueur seulement
 func unlock(reason: StringName) -> void
-func is_locked(faction: int) -> bool                # vrai si réentrance, ou verrou joueur pour la faction du joueur
+func is_locked(faction: int, emitter: int) -> bool  # vrai si réentrance, ou verrou joueur pour la faction du joueur ET un émetteur JOUEUR (l'IA et SYS, dont VALIDER_LA_LECTURE, ne sont jamais bloquées par un verrou)
 func clear_player_locks(except: StringName = &"") -> void
 ```
 
@@ -127,7 +127,7 @@ func clear_player_locks(except: StringName = &"") -> void
 - Les durées de séquence, `Q_max`, `T_CRENEAU_RÉDUIT`, `ATTACK_LOCK_MS` et les délais **doivent** rester dans des fichiers de données.
 - Le pipeline **ne doit jamais** connaître la file par un nom global : il reçoit un `EventSink`.
 - Le séquenceur et la file **doivent** pouvoir être construits sans scène, avec une horloge et des gestionnaires factices, pour les tests unitaires.
-- Les priorités de traitement sont explicites : `PresentationClock` −20, `TileTimeSource` −10, `PresentationSequencer` 0, `TileRenderer` 10 (la valeur la plus basse est appelée en premier).
+- Les priorités de traitement sont explicites : `PresentationClock` −20, `TileTimeSource` −10, `PresentationSequencer` 0, `TileRenderer` 10, `AiRunner` 20 (ADR-0005) (la valeur la plus basse est appelée en premier ; cette liste est la source unique).
 - `pop()` rend `null` quand la file est vide ; une classe par fichier `.gd`.
 
 ## Alternatives Considered
@@ -211,5 +211,5 @@ Sans objet : aucun code de production n'existe.
 
 ## Related
 - GDD : `design/gdd/commandes-evenements.md` (23), `hud-systeme.md` (17), `recoloration-monde.md` (15), `modele-etat-partie.md` (1, règle 9 et copies).
-- ADR-0001 (rendu des tuiles) : dépend de celui-ci ; à amender (adaptateur `TileRendererHandler`, `StateView`, `event_id`, propriété de l'horloge).
+- ADR-0001 (rendu des tuiles) : dépend de celui-ci ; amendé (adaptateur `TileRendererHandler`, `StateView`, `event_id`, propriété de l'horloge).
 - ADR-0003 (`StateView`, modèle d'état, copies) : celui-ci en dépend ; ordre d'acceptation ADR-0003, puis celui-ci, puis ADR-0001.
