@@ -65,7 +65,126 @@ last_updated: "2026-10-29"
 # Attribute fields: any key stats that could appear in another GDD
 #   (health, damage, drops, faction, etc.)
 
-entities: []
+entities:
+  - name: eclaireur
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    camp: pack
+    health: 6
+    attack: 1
+    defense: 0
+    movement: 4
+    range: 1
+    vision: 4
+    trait_family: mât
+    can_capture: false
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: assaut
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    camp: pack
+    health: 8
+    attack: 3
+    defense: 1
+    movement: 3
+    range: 1
+    vision: 2
+    trait_family: lame
+    can_capture: false
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: rempart
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    camp: pack
+    health: 14
+    attack: 1
+    defense: 2
+    movement: 2
+    range: 1
+    vision: 2
+    trait_family: carapace
+    can_capture: false
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: ouvrier
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    camp: pack
+    health: 7
+    attack: 1
+    defense: 0
+    movement: 3
+    range: 1
+    vision: 2
+    trait_family: fourche
+    can_capture: true
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: sentinelle
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    camp: gardien
+    health: 10
+    attack: 0
+    defense: 2
+    movement: 0
+    range: 1
+    vision: 3
+    trait_family: croc
+    can_capture: false
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: chasseur
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    camp: gardien
+    health: 8
+    attack: 3
+    defense: 0
+    movement: 3
+    range: 1
+    vision: 3
+    trait_family: faille
+    can_capture: false
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: bastion
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    camp: gardien
+    health: 14
+    attack: 2
+    defense: 2
+    movement: 1
+    range: 1
+    vision: 2
+    trait_family: crete
+    can_capture: true
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
 
 # Example (remove when first real entry is added):
 #
@@ -151,6 +270,47 @@ formulas:
     output_range: [-inf, inf]
     expression: "(floori(w.x), floori(w.y)) with w = c + (s - rc) / tile_pt"
     notes: "Presentation float math; yields integer (x, y) for commands. floori, never int(). Outside [0,W)x[0,H) is an empty background, never clamped (like tile_index)."
+    added: 2026-10-30
+    revised: ""
+  - name: modifier_pv
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    variables:
+      - pv_avant
+      - delta
+      - PV_max
+    output_range: [0, 14]
+    expression: "pv_apres = clamp(pv_avant + delta, 0, PV_max); detruite = (pv_apres = 0) and (pv_avant > 0)"
+    notes: "Only HP write path (6). Combat (8) computes delta; rest heal passes a positive delta."
+    added: 2026-10-30
+    revised: ""
+  - name: revenu
+    status: active
+    source: design/gdd/energie.md
+    referenced_by:
+      - design/gdd/energie.md
+    variables:
+      - REVENU_NIVEAU
+      - niveau
+    output_range: [0, 30]
+    expression: "sum of REVENU_NIVEAU[level(n)] over nodes owned by the faction"
+    notes: "Computed each time, never stored. Paid at the start of the faction's turn."
+    added: 2026-10-30
+    revised: ""
+  - name: crediter
+    status: active
+    source: design/gdd/energie.md
+    referenced_by:
+      - design/gdd/energie.md
+    variables:
+      - avant
+      - montant
+      - ENERGIE_MAX
+    output_range: [0, 99]
+    expression: "apres = min(avant + montant, ENERGIE_MAX); surplus_perdu = avant + montant - apres"
+    notes: "Surplus is lost, never refused. Only the turn-start income credits at MVP."
     added: 2026-10-30
     revised: ""
   - name: draw
@@ -332,6 +492,7 @@ constants:
     source: design/gdd/modele-etat-partie.md
     referenced_by:
       - design/gdd/modele-etat-partie.md
+      - design/gdd/unites-drones.md
     value: 60
     unit: units per match
     added: 2026-10-29
@@ -497,6 +658,52 @@ constants:
       - design/accessibility-requirements.md
     value: 0.5
     unit: tiles (finger drift below which a touch is a tap)
+    added: 2026-10-30
+    revised: ""
+  - name: REST_HEAL
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    value: 2
+    unit: HP healed at rest (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: NODE_REST_BONUS
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    value: 2
+    unit: extra HP healed at rest on a node owned by the unit's faction (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: ENERGIE_MAX
+    status: active
+    source: design/gdd/energie.md
+    referenced_by:
+      - design/gdd/energie.md
+      - design/ux/hud.md
+    value: 99
+    unit: energy (stock cap per faction)
+    added: 2026-10-30
+    revised: ""
+  - name: ENERGIE_DEPART
+    status: active
+    source: design/gdd/energie.md
+    referenced_by:
+      - design/gdd/energie.md
+    value: 6
+    unit: energy at match start (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: REVENU_NIVEAU
+    status: active
+    source: design/gdd/energie.md
+    referenced_by:
+      - design/gdd/energie.md
+    value: "1:3, 2:4, 3:5"
+    unit: energy per turn per owned node, by node level (proposed)
     added: 2026-10-30
     revised: ""
 
