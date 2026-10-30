@@ -519,8 +519,8 @@ listés.*
 
 ## Visual/Audio Requirements
 
-Aucune. Ce système n'a ni rendu ni son : il stocke l'état de couleur des tuiles (écrit
-par 15) mais ne l'affiche pas. Les exigences visuelles et sonores appartiennent à la
+Aucune. Ce système n'a ni rendu ni son : il stocke le propriétaire et le dernier
+changement de chaque tuile, dont la recoloration (15) déduit la couleur. Les exigences visuelles et sonores appartiennent à la
 recoloration (15), au HUD (17) et à l'audio (20).
 
 ## Game Feel
@@ -544,7 +544,7 @@ Aucune interface propre. Deux exigences pour les interfaces qui le lisent :
 |---|---|
 | `design/gdd/game-concept.md` | Pilier 4 (« La puissance se mérite », IA en deux temps, intentions sauvegardées) ; Technical Considerations (état en données pures, reprise après kill, tour d'IA < 2 s, 30 fps) ; MVP Definition (point 8) |
 | `design/gdd/systems-index.md` | Place du système (1, Foundation, MVP) ; notes TD-SYSTEM-BOUNDARY points 1, 2, 6 et 7 ; contrats « le score lit l'état » et « territoire écrit par 11 seulement » |
-| `design/ux/hud.md` | Le HUD lit les intentions, la visibilité, les compteurs de score et l'état de couleur décrits ici ; état « Reprise après un kill » de sa section 5 |
+| `design/ux/hud.md` | Le HUD lit les intentions, la visibilité, les compteurs de score, le journal des lectures (fragments lus) et le dernier changement de propriétaire des tuiles (marqueurs « recolorée par une ruine » et « tuile perdue » de sa section 8, qui survivent ainsi à une reprise) ; état « Reprise après un kill » de sa section 5 |
 | `design/accessibility-requirements.md` | Aucune exigence directe ; la pause partout et la sauvegarde automatique (Cognitive Accessibility) reposent sur la règle 13 |
 | `docs/engine-reference/godot/breaking-changes.md` | `duplicate_deep()` (4.5+) et `FileAccess.store_*` qui renvoie `bool` : à prendre en compte dans l'ADR de représentation et dans le GDD de la sauvegarde (16) |
 | GDD 2 à 23 (à écrire) | Chaque GDD confirme la tranche qu'il possède (Interactions with Other Systems) et cite ce document dans ses Dependencies |
