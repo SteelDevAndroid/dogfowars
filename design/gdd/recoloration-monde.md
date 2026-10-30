@@ -9,7 +9,7 @@
 
 ## Summary
 
-La recoloration du monde fait passer les tuiles du gris à la teinte de la faction qui les tient. Un seul octet par tuile (la couleur affichée pour le joueur) est dérivé de l'état ; une onde d'anneaux de 600 à 1 000 ms, purement visuelle, l'accompagne. Le sens de la recoloration ne change jamais mécaniquement : seul le contenu des fragments le fait évoluer.
+La recoloration du monde fait passer les tuiles du gris à la teinte de la faction qui les tient. Une seule valeur par tuile (la couleur affichée pour le joueur) est **déduite** de l'état, jamais stockée (PR #3, 2026-10-30) ; une onde d'anneaux de 600 à 1 000 ms, purement visuelle, l'accompagne. Le sens de la recoloration ne change jamais mécaniquement : seul le contenu des fragments le fait évoluer.
 
 > **Quick reference** — Layer: `Feature` · Priority: `MVP` · Key deps: `Carte en tuiles et terrain, Nœuds`
 
@@ -17,9 +17,10 @@ La recoloration du monde fait passer les tuiles du gris à la teinte de la facti
 
 La recoloration est ce que le joueur voit de la conquête : le monde est gris jusqu'à ce que la meute le
 touche, et une tuile possédée prend la teinte pleine de sa faction. Ce système ne **décide** rien : il
-**lit** le propriétaire que les nœuds (11) écrivent (`design/gdd/noeuds.md`) et en fait un **état de couleur**
-par tuile, stocké dans la tranche Carte de l'état (`design/gdd/modele-etat-partie.md`), que le rendu affiche.
-Il possède cet état de couleur, l'**onde de recoloration** qui le fait apparaître, et le lien avec la
+**lit** le propriétaire et le dernier changement de propriétaire que les nœuds (11) écrivent
+(`design/gdd/noeuds.md`, tranche Carte de `design/gdd/modele-etat-partie.md`) et en **déduit** une **couleur** par
+tuile, que le rendu affiche ; rien n'est stocké dans l'état.
+Il possède cette dérivation, l'**onde de recoloration** qui la fait apparaître, et le lien avec la
 mémoire hors de vue (le dernier propriétaire vu, `design/gdd/brouillard-vision.md`). La saturation est
 **binaire** (décision du 2026-10-30) : gris, ou teinte pleine de la faction ; la frontière entre deux
 territoires est franche.
@@ -29,8 +30,8 @@ conquête, puis la question « pour qui allume-t-on ? » — passe **par le seul
 par une couche mécanique ajoutée (note du directeur créatif, `design/gdd/systems-index.md`, pilier 3) : la
 recoloration se comporte de la même façon du premier au dernier fragment lu.
 
-*Cadrage : à la fois une donnée d'état (l'état de couleur) et la lecture visuelle de la croissance de la
-meute. Aucun ADR n'existe encore sur le rendu des tuiles.*
+*Cadrage : une fonction pure de l'état (la couleur) et la lecture visuelle de la croissance de la
+meute. Le rendu des tuiles est décidé dans ADR-0001.*
 
 ## Player Fantasy
 
@@ -61,27 +62,27 @@ sans qu'aucun pixel change : le sens bascule dans la tête du joueur, par le seu
 
 ## Detailed Design
 
-*Décisions du 2026-10-30 : saturation binaire ; un seul octet de couleur par tuile, calculé pour la vue de la
+*Décisions du 2026-10-30 : saturation binaire ; une seule couleur par tuile, déduite pour la vue de la
 faction de référence (le joueur humain) ; l'onde est de la présentation, l'état est final avant elle ; le sens de
 la recoloration ne change jamais mécaniquement. Les durées sont des valeurs de départ [PROP].*
 
 ### Core Rules
 
-**A. L'octet d'état de couleur**
+**A. La couleur déduite**
 
-1. **Contenu.** L'état de couleur d'une tuile est **1 octet** : l'indice de la couleur *affichée* (0 = gris ou
-   rien, 1..F = faction). Il ne stocke ni saturation ni animation ; la saturation binaire en découle (0 → gris,
-   ≥ 1 → teinte pleine).
-2. **Une seule vue : celle de la faction de référence.** L'octet est global dans la tranche Carte, mais il vaut
-   *la vue de la faction de référence* : le joueur humain, dont l'identifiant est conservé dans l'en-tête de
-   l'état (la faction 1 dans les tests sans humain). Les mémoires par faction restent dans l'octet 1 de la
-   tranche Visibilité (5). Aucune autre faction n'a d'octet de couleur, et l'IA ne le lit pas.
-3. **Pourquoi le stocker alors qu'il se dérive.** Il se dérive de (propriétaire, visibilité, octet 1). Raisons du
-   stockage : le rendu et le HUD lisent un seul octet sans réévaluer la visibilité, les tests et la sauvegarde
-   comparent « ce que le joueur voit », et l'événement COULEUR_DES_TUILES_CHANGÉE se calcule par différence avec
-   l'ancienne valeur. Il suit la logique de `vue_maintenant` : redondant, validé « stocké = recalculé » à chaque
-   chargement et dans les tests, la valeur recalculée l'emportant avec une trace au journal de développement.
-4. **Écrivain unique.** Seul ce système écrit l'octet.
+1. **Contenu.** La couleur d'une tuile est **une valeur de 0 à F** : l'indice de la couleur *affichée* (0 = gris ou
+   rien, 1..F = faction). Elle ne porte ni saturation ni animation ; la saturation binaire en découle (0 → gris,
+   ≥ 1 → teinte pleine). Dans la suite, « octet de couleur » désigne cette valeur déduite (cache hors de l'état), jamais un champ de l'état.
+2. **Une seule vue : celle de la faction de référence.** La couleur vaut *la vue de la faction de référence* : le
+   joueur humain, dont l'identifiant est conservé dans l'en-tête de l'état (la faction 1 dans les tests sans
+   humain). Les mémoires par faction restent dans l'octet 1 de la tranche Visibilité (5). Aucune autre faction n'a
+   de couleur, et l'IA ne la lit pas.
+3. **Déduite, jamais stockée** (PR #3, 2026-10-30). `couleur(état, vue, P)` est une fonction pure de (propriétaire,
+   vision actuelle, octet 1) : l'état ne contient aucun octet de couleur, la sauvegarde ne le porte pas et il ne peut
+   donc jamais diverger. Le rendu et le HUD lisent un **cache de couleur** hors de l'état (une valeur par tuile,
+   reconstruit au chargement et après `restore_from`) ; l'événement COULEUR_DES_TUILES_CHANGÉE se calcule par
+   différence entre la couleur d'avant la commande et celle d'après.
+4. **Aucun écrivain.** Personne n'écrit la couleur dans l'état ; ce système possède la fonction et le cache.
 
 **B. Dérivation**
 
@@ -90,7 +91,8 @@ la recoloration ne change jamais mécaniquement. Les durées sont des valeurs de
    - EXPLORÉE : `couleur(T)` = octet 1 de P (le dernier propriétaire vu) ;
    - INCONNUE : `couleur(T)` = 0 toujours (aplat de brouillard, aucune teinte, aucune fuite).
 6. **Ordre d'appel, dans la commande, avant la publication du lot.** 11 écrit le propriétaire, puis 5 recalcule la
-   vue et rafraîchit l'octet 1, puis 15 recalcule l'octet et dresse la différence. 15 ne tourne jamais avant 5.
+   vue et rafraîchit l'octet 1, puis 15 recalcule la couleur et dresse la différence avec la couleur d'avant la
+   commande (gardée dans le cache de couleur). 15 ne tourne jamais avant 5.
 7. **Assombrissement hors de vue.** L'octet ne change pas quand VISIBLE devient EXPLORÉE : l'assombrissement est
    fait par la présentation du brouillard (5, 17), jamais par ce système.
 8. **Changement caché.** Si une tuile redevient VISIBLE avec un propriétaire différent de la mémoire, l'octet change
@@ -168,7 +170,7 @@ la recoloration ne change jamais mécaniquement. Les durées sont des valeurs de
 
 | # | Système | Sens | Contrat | Propriétaire de l'interface |
 |---|---|---|---|---|
-| 1 | État | écrit | L'octet de couleur dans la tranche Carte ; l'en-tête garde la faction de référence | 1 pour la forme, 15 pour les écritures |
+| 1 | État | lit | Propriétaire et dernier changement de propriétaire (tranche Carte) ; l'en-tête garde la faction de référence ; aucune couleur n'est écrite dans l'état | 1 |
 | 2 | Carte | lit | Dimensions, `tile_index` | 2 |
 | 4 | Contrôles | aucun | L'onde ne bloque jamais une commande | — |
 | 5 | Brouillard | lit | Visibilité et octet 1 de la faction de référence ; 5 passe avant 15 | 5 |
@@ -192,7 +194,7 @@ la recoloration ne change jamais mécaniquement. Les durées sont des valeurs de
 | P | 1..F | Faction de référence |
 | proprio_réel | 0..F | Propriétaire écrit par 11 (0 = neutre) |
 | octet1_P | 0..F | Dernier propriétaire vu par P (GDD 5, octet 1) |
-| couleur(T) | 0..F | Octet de couleur stocké |
+| couleur(T) | 0..F | Couleur déduite (cache hors de l'état) |
 
 **Plage** : 0..F. INCONNUE donne toujours 0. **Exemple** : propriétaire réel 2 ; VISIBLE → 2 ; EXPLORÉE avec octet 1 = 1 → 1 (la mémoire, non la réalité) ; INCONNUE → 0. L'octet 1 n'est jamais écrit sur une tuile INCONNUE (GDD 5).
 
@@ -200,7 +202,7 @@ la recoloration ne change jamais mécaniquement. Les durées sont des valeurs de
 
 `indice(c, P) = 0` si c = 0 ; `PROPRE (1)` si c = P ; `ENNEMI (2)` sinon. `teinte = TABLE_TEINTES[mode_daltonien][faction_P][indice]` : la teinte PROPRE dépend de la faction de P (F1 teal #1FA38F, F2 #8FD460, F3 cobalt #3A6FE0), ENNEMI reste #C49BEA.
 
-**Plage** : indice ∈ {0, 1, 2}. L'octet stocké est un identifiant de faction ; la relation ne s'applique qu'à l'affichage. **Exemple** (P = 1) : c = 1 → PROPRE ; c = 2 → ENNEMI (#C49BEA) ; c = 0 → gris. Le mode daltonien change la table, pas c.
+**Plage** : indice ∈ {0, 1, 2}. La couleur est un identifiant de faction ; la relation ne s'applique qu'à l'affichage. **Exemple** (P = 1) : c = 1 → PROPRE ; c = 2 → ENNEMI (#C49BEA) ; c = 0 → gris. Le mode daltonien change la table, pas c.
 
 ### F3. Anneau et ordre
 
@@ -280,14 +282,14 @@ la recoloration ne change jamais mécaniquement. Les durées sont des valeurs de
 - **E11. Capture et révélation dans la même commande.** Un seul événement ; cause par priorité (règle 18) ; champ `mode` par groupe ; les tuiles en RÉVÉLATION ne comptent ni dans k_max ni dans la source effective.
 - **E12. Égalité de `tile_index`.** Impossible entre deux tuiles distinctes ; les listes sont triées puis dédoublonnées avant l'émission, un doublon lève une assertion en développement.
 - **E13. Onde plus longue que `T_TOTAL_MAX`.** Impossible (F4) ; une réécriture dure au plus D.
-- **E14. Octet stocké ≠ recalculé.** La valeur recalculée l'emporte, trace au journal de développement, aucun événement, affichage direct. Une incohérence de l'octet 1 est l'affaire de 5.
+- **E14. Cache de couleur ≠ couleur recalculée.** Le cache est jeté et reconstruit depuis l'état, trace au journal de développement, aucun événement, affichage direct. Une incohérence de l'octet 1 est l'affaire de 5.
 - **E15. 16×16 avec beaucoup d'ondes.** Une seule animation par tuile (au plus 256) ; l'affichage atteint l'état final au plus `T_TOTAL_MAX` après le dernier événement consommé ; si la file déborde (`EVENT_QUEUE_MAX` = 256), 23 émet RESYNCHRONISER (E4).
 
 ## Dependencies
 
 | Système | Direction | Nature | Contrat |
 |---|---|---|---|
-| 1 État de la partie | dépend de | dur | Tranche Carte (octet de couleur) ; faction de référence dans l'en-tête |
+| 1 État de la partie | dépend de | dur | Tranche Carte (propriétaire, dernier changement) ; faction de référence dans l'en-tête |
 | 2 Carte et terrain | dépend de | dur | Dimensions, `tile_index` |
 | 5 Brouillard | dépend de | dur | Visibilité et octet 1 ; 5 passe avant 15 |
 | 11 Nœuds et territoire | dépend de | dur | Propriétaire des tuiles ; appel de 15 après chaque écriture |
@@ -336,7 +338,7 @@ Aucun réglage n'agit sur la logique : tous sont de présentation, validés en d
 - `design/gdd/brouillard-vision.md` : règles 5 et 9 amendées (gain hors de vue ; MONTER_NŒUD recalcule la vue) ; octet 1.
 - `design/gdd/noeuds.md` : `recolorer_zone`, B_max (formule 6), appel de 15 après chaque écriture.
 - `design/gdd/commandes-evenements.md` : ajouter COULEUR_DES_TUILES_CHANGÉE (groupes avec mode), RESYNCHRONISER.
-- `design/gdd/modele-etat-partie.md` : octet de couleur dans la tranche Carte (aujourd'hui 4 octets), faction de référence en en-tête.
+- `design/gdd/modele-etat-partie.md` : propriétaire et dernier changement de propriétaire dans la tranche Carte (6 octets par tuile), faction de référence en en-tête ; aucune couleur stockée.
 - `design/art/art-bible.md` §4 et `design/ux/hud.md` : teintes, onde, marqueurs.
 - **Exigence vers le GDD 13 et le narrative-director** : une part identifiée des fragments, notamment dans le dernier tiers de la chronique, reprend le verbe et l'image de la recoloration (« pour qui allume-t-on ? »), sans qu'aucun paramètre de rendu ne change (règle 21). Sans cela, la promesse du concept n'a aucun support.
 
@@ -346,9 +348,9 @@ Aucun réglage n'agit sur la logique : tous sont de présentation, validés en d
 
 ### A. Octet de couleur et dérivation (règles 1 à 9, F1, F2)
 
-- **AC-RC1** (Logic, règles 1 et 5, F1) **GIVEN** une tuile de propriétaire réel 2 et P = 1, **THEN** l'octet vaut 2 si VISIBLE, 1 si EXPLORÉE avec octet 1 de P = 1 (la mémoire l'emporte), 0 si INCONNUE ; **GIVEN** des tuiles INCONNUES de propriétaire réel 0, 1 et 2, **THEN** les trois octets valent 0. L'octet tient sur 1 octet, sans saturation ni animation stockée.
-- **AC-RC2** (Logic, règle 3, E14) **GIVEN** une carte 16×16, **WHEN** l'état est chargé ou validé, **THEN** octet stocké = octet recalculé sur les 256 tuiles ; **GIVEN** un octet corrompu volontairement (2 au lieu de 1), **THEN** la valeur recalculée (1) l'emporte, une trace est écrite au journal de développement, aucun événement n'est émis et l'affichage est direct.
-- **AC-RC3** (Logic, règles 2 et 4) **GIVEN** 2 factions, **THEN** l'en-tête conserve l'identifiant de la faction de référence (1 dans un test sans humain), l'octet n'existe que pour cette vue, et une écriture de l'octet par un autre module échoue.
+- **AC-RC1** (Logic, règles 1 et 5, F1) **GIVEN** une tuile de propriétaire réel 2 et P = 1, **THEN** la couleur vaut 2 si VISIBLE, 1 si EXPLORÉE avec octet 1 de P = 1 (la mémoire l'emporte), 0 si INCONNUE ; **GIVEN** des tuiles INCONNUES de propriétaire réel 0, 1 et 2, **THEN** les trois couleurs valent 0. L'état ne contient aucun champ de couleur.
+- **AC-RC2** (Logic, règle 3, E14) **GIVEN** une carte 16×16, **WHEN** l'état est chargé, **THEN** le cache de couleur est reconstruit et égal à `couleur(état, vue, P)` sur les 256 tuiles ; **GIVEN** un cache corrompu volontairement (2 au lieu de 1), **THEN** il est jeté et reconstruit (1), une trace est écrite au journal de développement, aucun événement n'est émis et l'affichage est direct.
+- **AC-RC3** (Logic, règles 2 et 4) **GIVEN** 2 factions, **THEN** l'en-tête conserve l'identifiant de la faction de référence (1 dans un test sans humain), la couleur n'est déduite que pour cette vue, et aucun champ de couleur n'existe dans l'état (le cache de couleur est hors de l'état).
 - **AC-RC4** (Logic, règle 7) **GIVEN** une tuile VISIBLE qui passe EXPLORÉE sans changement de propriétaire, **THEN** l'octet est inchangé, le différentiel est vide, aucun événement.
 - **AC-RC5** (Logic, règle 8) **GIVEN** une tuile EXPLORÉE d'octet 1 dont le propriétaire réel est devenu 2 hors de vue, **WHEN** elle redevient VISIBLE, **THEN** l'octet passe de 1 à 2, cause RÉVÉLATION, groupe en mode RÉVÉLATION, fondu de `T_REV` = 150 ms, sans onde.
 - **AC-RC6** (Logic, règle 9, F2) **GIVEN** P = 1, **THEN** `indice(0)` = 0, `indice(1)` = PROPRE, `indice(2)` = ENNEMI ; avec 3 factions, 2 et 3 donnent ENNEMI ; ENNEMI = #C49BEA lu depuis les données, pas depuis le code.
@@ -414,9 +416,9 @@ AC-RC9 (rayon 3 à 0, 200, 400, 600, 1 000 ms) ; AC-RC10 (source en coin à 600 
 | Marque permanente d'une ruine lue (ancrage) | art-director | GDD 13, 17 | Ouverte |
 | Donnée par instance ou uniforme : coût réel sur Mobile | technical-artist | Prototype de rendu, ADR | Ouverte |
 | Fondu de révélation 150 ms ou apparition instantanée | ux-designer | Prototype | Posé à 150 ms |
-| Tranche Carte de 4 octets (GDD 1) et octet de couleur | systems-designer | Revue de 1 | Ouverte |
+| Tranche Carte de 4 octets (GDD 1) et octet de couleur | systems-designer | Revue de 1 | Résolue le 2026-10-30 : PR #3, tranche Carte de 6 octets, couleur déduite |
 | Plusieurs adversaires : un violet commun rend la carte illisible ; teinte propre à chaque adversaire, ou violet commun plus motif de faction sur la lisière (art bible §4) | art-director | Avant tout mode multi-IA | Ouverte, ne bloque pas le MVP |
 | Palette daltonienne à trois factions : valider la ligne F1 #3A8EE6, F2 #A9D6F5, F3 #24408F | art-director | Revue de l'art bible | Ouverte |
 | Ordre d'affichage quand une ruine est lue : onde avant le fragment, après sa fermeture, ou fragment hors de la zone | ux-designer, HUD (17) | GDD 17 | Ouverte |
-| Stockage redondant de l'octet ou dérivation à la volée | technical-director | ADR sur le rendu des tuiles | Ouverte |
+| Stockage redondant de l'octet ou dérivation à la volée | technical-director | ADR sur le rendu des tuiles | Résolue le 2026-10-30 : dérivation (PR #3), cache hors de l'état (ADR-0001) |
 | Simplification possible pour le palier de 5 mois : priorité à 5 causes, réduction automatique de `T_ANNEAU_eff` (rejet au chargement suffirait) | systems-designer, technical-artist | Prototype | Ouverte |

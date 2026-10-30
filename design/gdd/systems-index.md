@@ -95,6 +95,22 @@ d'une information.
 
 ## Systems Enumeration
 
+**Sens de la colonne « Depends On »** (précisé le 2026-10-30) : le système A dépend de B
+quand A **lit ou appelle B directement**, par un contrat de données (une tranche de
+l'état dont B est propriétaire, une valeur ou une fonction de B) ou de fonction. Cela
+veut dire trois choses : le GDD de B est conçu avant celui de A ; un changement du
+contrat de B oblige à relire A ; A ne peut pas être testé sans un substitut de B. Cela ne
+veut **pas** dire :
+- « s'exécute après » (l'ordre des phases est possédé par les tours, 3) ;
+- « écrit dans les données de » (qui écrit quoi est dans le modèle d'état, règle 2 du
+  GDD 1 : un système peut écrire une tranche sans que son propriétaire dépende de lui) ;
+- « reçoit les événements de » (les événements passent par la couche des commandes, 23 :
+  le consommateur dépend de 23, jamais du producteur) ;
+- « est affiché par » (le HUD, 17, dépend des systèmes qu'il montre, pas l'inverse).
+La colonne ne liste que les dépendances **directes** ; la fermeture transitive se lit
+dans la carte ci-dessous. Chaque GDD qualifie les siennes de dures (sans elle, rien ne
+marche) ou souples (dégradation prévue) dans sa section Dependencies.
+
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | Modèle d'état de partie | Core | MVP | Designed | design/gdd/modele-etat-partie.md | — |
@@ -304,8 +320,10 @@ indépendants d'une même couche peuvent être conçus en parallèle.*
 ## Circular Dependencies
 
 - **Aucun cycle**, sous trois conditions :
-  - **Ruines ↔ chronique** : cassé par le profil (22), qui porte le pool de fragments. Les
-    ruines lisent et avancent le pool dans le profil ; la chronique lit le profil.
+  - **Ruines ↔ chronique** : cassé par le profil (22), qui porte la chronique. À la
+    création de la partie, la chronique est copiée dans l'état (instantané, GDD 1 règle 10) ;
+    les ruines (13) n'y lisent que l'instantané et le journal, et la couche des commandes
+    (23) applique l'effet « enregistrer un fragment » au profil ; la chronique lit le profil.
   - **Tours ↔ IA** : les tours définissent les phases ; l'IA s'y branche. Les tours ne
     dépendent pas de l'IA.
   - **Score ↔ ruines et nœuds** : le score lit ses comptes dans l'état de partie (1), pas

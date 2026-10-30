@@ -13,7 +13,7 @@ Proposed
 Utilisateur (direction de projet), Claude (rédaction), technical-director (validation avant écriture).
 
 ## Summary
-Toute modification de l'état en partie passe par un `CommandPipeline` synchrone : une commande est une **classe `RefCounted` typée en données pures**, validée contre la **vue filtrée paresseuse** de sa faction puis appliquée par un **handler typé par système propriétaire** (tableau indexé par un enum de 12 types) ; l'application ne peut pas échouer, rend ses événements dans l'ordre des écritures et fait avancer la révision. L'aperçu est la même commande appliquée sur une copie de l'état **vu par la faction** ; l'annulation du déplacement restaure un instantané gardé hors de l'état.
+Toute modification de l'état en partie passe par un `CommandPipeline` synchrone : une commande est une **classe `RefCounted` typée en données pures**, validée contre la **vue filtrée paresseuse** de sa faction puis appliquée par un **handler typé par système propriétaire** (tableau indexé par un enum de 13 types) ; l'application est une **fonction de règle pure** qui ne peut pas échouer : elle écrit l'état par les fonctions des propriétaires, fait avancer la révision et **rend ses effets** (événements dans l'ordre des écritures, écriture du profil) sous forme de valeurs, que **seule la couche des commandes applique** (décision de la PR #3, 2026-10-30). L'aperçu et les simulations appliquent la même fonction sur une copie de l'état **vu par la faction** et jettent les effets ; l'annulation du déplacement restaure un instantané gardé hors de l'état.
 
 ## Engine Compatibility
 
@@ -56,19 +56,19 @@ Le GDD 23 fixe : valider puis appliquer (règle 1), un résultat sans texte (2),
 
 **1. Commandes en données pures.** Une commande est une classe `RefCounted` typée, une par fichier, héritant de `Command` (`faction`, `emitter` : JOUEUR, IA ou SYS). Elle ne porte que des entiers et des identifiants, jamais de `Node`, `Callable` ni `RID`, et **aucune logique**. Un `CommandCodec` unique la sérialise avec un **identifiant de type entier et stable** (un `StringName` n'est pas un format).
 
-**2. Handlers typés par système.** Un enum entier `CommandType` (12 valeurs) indexe un tableau de **handlers typés**, une classe par système propriétaire (`validate(view: StateView, cmd) -> ValidationResult`, `apply(state: GameState, cmd, ctx: ApplyContext) -> ApplyResult`). Le tableau est construit **une fois** et immuable, partagé par le pipeline réel et les simulations ; un test de démarrage vérifie que chaque type est enregistré. `validate` est une fonction pure ; `apply` appelle les **fonctions d'écriture des propriétaires**, jamais une colonne directe, et **n'émet jamais de commande** (l'enchaînement des tours est porté par le système des tours, hors du pipeline).
+**2. Handlers typés par système.** Un enum entier `CommandType` (13 valeurs, dont la commande interne VALIDER_LA_LECTURE) indexe un tableau de **handlers typés**, une classe par système propriétaire (`validate(view: StateView, cmd) -> ValidationResult`, `apply(state: GameState, cmd) -> ApplyResult`, où `ApplyResult` porte `révélé`, `ruine_lue` et la liste ordonnée des **effets**). Le tableau est construit **une fois** et immuable, partagé par le pipeline réel et les simulations (qui appellent `apply` sans passer par la couche des commandes et jettent les effets) ; un test de démarrage vérifie que chaque type est enregistré. `validate` est une fonction pure ; `apply` appelle les **fonctions d'écriture des propriétaires**, jamais une colonne directe, et **n'émet jamais de commande** (l'enchaînement des tours est porté par le système des tours, hors du pipeline).
 
 **3. Vue filtrée paresseuse.** La validation d'une commande réelle utilise `FactionView(state, faction)`, une `StateView` qui teste la visibilité **à chaque lecture, sans copie**. L'IA fige sa vue une fois par perception (`filtered_copy`, ADR-0003), puis valide et prévisualise sur des `duplicate_state()` de cette copie : jamais un `filtered_copy` par candidate. Une seule source de filtrage : `filtered_copy` et `FactionView` s'appuient sur le même prédicat de visibilité (système 5) ; un test de parité compare `validate(FactionView(réel, f))` à `validate(filtered_copy(f).view())` sur un corpus de fabrique.
 
 **4. Flux d'une commande** (synchrone), avec un **préfixe commun fixe de refus** :
 1. réentrance (COMMANDES_VERROUILLÉES, erreur en développement) ; 2. PARTIE_TERMINÉE ; 3. PAS_VOTRE_TOUR ; 4. verrou du joueur (COMMANDES_VERROUILLÉES) ; 5. vérifications propres à la commande, dans un ordre fixe couvert par un test. PARTIE_TERMINÉE et PAS_VOTRE_TOUR sont des lectures d'état (système 3), **pas** le `CommandGate` (qui ne porte que la réentrance et les verrous du joueur, ADR-0002). Exception : ABANDONNER est permis en phase ennemie.
 - **Appliquer** : avant un DÉPLACER du joueur, l'instantané d'annulation est pris (`duplicate_state()`, dans l'`UndoSlot`, hors de l'état) ; `apply` s'exécute et enregistre les événements dans l'ordre des écritures ; la **révision** (tranche « journal des commandes », propriété du pipeline) augmente de 1 par la fonction d'écriture de cette tranche (`command_id = révision`, un seul numéro). Une copie incrémente sa propre révision sans effet sur l'état réel.
-- **Phase après validation (post-commit)** : un `PostCommitPort` injecté (réel pour la partie, nul pour les copies, l'aperçu et le rejeu ; il lit le drapeau « simulation » d'ADR-0003) déclenche la sauvegarde (16) **après chaque commande du joueur** (annulation et abandon compris), juste après FINIR_LE_TOUR, à COMMENCER_LE_TOUR du joueur suivant, à la lecture d'une ruine et à la fin de partie (prédicat et séquence : ADR-0006), **synchrone et avant** `EventSink.push`, pour que le panneau de fragment ne s'ouvre qu'après l'écriture. La sauvegarde **n'écoute jamais la file d'événements** (une resynchronisation la vide).
+- **Phase après validation (post-commit)** : un `PostCommitPort` injecté (réel pour la partie, nul pour le rejeu ; l'aperçu et les simulations n'y passent jamais, puisqu'elles n'appellent que `apply`) déclenche la sauvegarde (16) **après chaque commande appliquée, du joueur, de l'IA ou interne**, annulation et abandon compris, et à la fin de partie (décision du 2026-10-30 ; prédicat et séquence : ADR-0006), **synchrone et avant** l'application des autres effets et `EventSink.push`, pour que le panneau de fragment ne s'ouvre qu'après l'écriture. La sauvegarde **n'écoute jamais la file d'événements** (une resynchronisation la vide). L'écriture coalescée d'ADR-0006 borne le coût quand l'IA enchaîne ses ordres.
 - **Publier** : le lot (`EventBatch`, ADR-0002) est poussé après l'application et le post-commit.
 
-**5. Lecture d'une ruine.** Dans la même application de DÉPLACER : arrivée, marquage de la ruine, calcul du fragment, entrée « en attente » au journal, zone recolorée, compteur, événement RUINE_LUE (`ruines-fragments.md`, règle 14 a–g). Le fragment lit le profil : `apply` reçoit une **`FragmentSource`** en lecture seule, qui est **figée dans les entrées du rejeu**. Après le commit, le port post-commit sauvegarde, enregistre le fragment au profil (idempotent), puis fait passer l'entrée à « validée » : c'est une **exception nommée à la règle 3 du GDD 1**, écrite par la fonction du propriétaire 13 **sans révision** ; l'égalité profonde du rejeu **normalise ce statut** (**GDD SYNC**).
+**5. Lecture d'une ruine.** Dans la même application de DÉPLACER : arrivée, marquage de la ruine, calcul du fragment **sur l'état seul** (instantané de la chronique plus journal, formule 1 du GDD 22 : aucune règle ne lit le profil), entrée « en attente » au journal, zone recolorée, compteur, et deux effets **rendus** : l'événement RUINE_LUE et « enregistrer un fragment » (`ruines-fragments.md`, règle 14 a–g). Après le commit, la couche des commandes enchaîne : (1) `PostCommitPort` sauvegarde la partie ; (2) un `ProfilePort` (réel pour la partie, **nul** pour le rejeu) applique l'effet « enregistrer un fragment » (idempotent par id) et écrit le profil ; (3) `EventSink.push` ; (4) si l'écriture du profil a réussi, la commande interne **VALIDER_LA_LECTURE** est soumise **après** la fin de la soumission courante (liste de commandes de suite vidée en sortie de `submit`, car la garde de réentrance refuse tout appel imbriqué) : c'est une commande ordinaire, avec révision, sauvegarde et entrée dans le `CommandLog`, qui passe l'entrée du journal à « validée ». **Il n'y a plus d'exception à la règle 3 du GDD 1** ni de `FragmentSource`. Si l'écriture du profil échoue, l'entrée reste « en attente » et le chargement la réconcilie (règle 10 du GDD 1).
 
-**6. Aperçu et vérification.** `preview(command) -> PreviewResult` valide puis applique sur `FactionView` → copie de **l'état vu par la faction émettrice** (`filtered_copy(f)` puis `duplicate_state()`, y compris pour le joueur), avec un `EventCollector` local qui construit la liste **sans la publier** : l'aperçu d'un déplacement dont le chemin traverse un ennemi caché ne montre ni arrêt ni unité cachée. `PreviewResult` porte la révision de base, pour jeter un aperçu périmé. `check(command) -> ValidationResult` valide **sans appliquer** (boutons grisés du HUD, y compris `check(UndoMoveCommand)` qui rend le **code** du motif). `apply_on(copy, command, collector) -> ValidationResult` enchaîne des coups sur une même copie pour l'IA. Copies d'aperçu et de simulation : transitoires, possédées par l'appelant, jamais retenues par le pipeline.
+**6. Aperçu et vérification.** `preview(command) -> PreviewResult` valide puis applique sur `FactionView` → copie de **l'état vu par la faction émettrice** (`filtered_copy(f)` puis `duplicate_state()`, y compris pour le joueur), en lisant la liste d'événements des effets rendus **sans la publier ni appliquer les autres effets** : l'aperçu d'un déplacement dont le chemin traverse un ennemi caché ne montre ni arrêt ni unité cachée. `PreviewResult` porte la révision de base, pour jeter un aperçu périmé. `check(command) -> ValidationResult` valide **sans appliquer** (boutons grisés du HUD, y compris `check(UndoMoveCommand)` qui rend le **code** du motif). `apply_on(copy, command) -> ValidationResult` enchaîne des coups sur une même copie pour l'IA. Copies d'aperçu et de simulation : transitoires, possédées par l'appelant, jamais retenues par le pipeline.
 
 **7. Embuscade.** Un déplacement dont le chemin rencontre une unité ennemie cachée est **permis** ; `apply` arrête l'unité sur la dernière tuile libre avant l'ennemi, qui est révélé ; **s'il n'y a aucune tuile libre avant l'ennemi, l'unité ne bouge pas**, l'ennemi est révélé et le déplacement est consommé. L'embuscade est le **seul** écart permis entre ce que voit `validate` et ce que rencontre `apply` ; tout autre écart est un bogue.
 
@@ -76,7 +76,7 @@ Le GDD 23 fixe : valider puis appliquer (règle 1), un résultat sans texte (2),
 
 **9. Commandes internes et intentions.** Début de tour, publication et exécution des intentions passent par le pipeline (émetteur SYS), avec leur révision. `ExecuteIntentionCommand` appelle **directement** les fonctions d'application d'attaque ou de capture sous une seule révision, **sans `submit` imbriqué** ; un ATTAQUER ou un CAPTURER émis par l'IA via `submit` est toujours refusé `AUCUNE_INTENTION`. Une intention annulée (cible déplacée…) fait +1 sur la révision et publie INTENTION_ANNULÉE.
 
-**10. Rejeu.** Un `CommandLog { format_version, initial_chronicle, commands }` porte **toutes** les commandes appliquées, quel que soit l'émetteur (JOUEUR, IA, SYS), annulation comprise, dans l'ordre des révisions ; les commandes refusées sont exclues, et un refus pendant le rejeu est une **divergence** signalée. Le rejeu tourne sans `CommandGate`, **avec** l'`UndoSlot`, le port post-commit nul et la `FragmentSource` figée ; il **ne relance pas** le planificateur de l'IA (déterminisme de l'IA testé à part). Un rejeu d'une autre version est refusé `FORMAT_INCOMPATIBLE`. `replay()` peut vivre dans un utilitaire de test.
+**10. Rejeu.** Un `CommandLog { format_version, initial_chronicle, commands }` porte **toutes** les commandes appliquées, quel que soit l'émetteur (JOUEUR, IA, SYS), annulation comprise, dans l'ordre des révisions ; les commandes refusées sont exclues, et un refus pendant le rejeu est une **divergence** signalée. Le rejeu tourne sans `CommandGate`, **avec** l'`UndoSlot`, le port post-commit nul et le `ProfilePort` nul (le fragment vient de l'instantané de la chronique, déjà dans l'état initial) ; il **ne relance pas** le planificateur de l'IA (déterminisme de l'IA testé à part). Un rejeu d'une autre version est refusé `FORMAT_INCOMPATIBLE`. `replay()` peut vivre dans un utilitaire de test.
 
 ### Architecture Diagram
 
@@ -85,8 +85,8 @@ Le GDD 23 fixe : valider puis appliquer (règle 1), un résultat sans texte (2),
    préfixe de refus : réentrance → PARTIE_TERMINÉE → PAS_VOTRE_TOUR → verrou joueur → vérifs de la commande
    validate(FactionView(état, faction))  ── ValidationResult (code + paramètres, aucun texte)
    [DÉPLACER du joueur : instantané ──► UndoSlot (hors de l'état)]
-   handler[type].apply(GameState, cmd, ApplyContext{FragmentSource, EventCollector}) ── fonctions des propriétaires
-   révision + 1 (tranche « journal des commandes ») ──► PostCommitPort (sauvegarde, profil, « validée ») ──► EventSink.push(EventBatch)
+   handler[type].apply(GameState, cmd) ── fonctions des propriétaires ──► ApplyResult{effets}
+   révision + 1 (tranche « journal des commandes ») ──► PostCommitPort (sauvegarde) ──► ProfilePort (profil) ──► EventSink.push(EventBatch) ──► commandes de suite (VALIDER_LA_LECTURE)
  check(cmd) : validate seul          preview(cmd) : filtered_copy(f) + duplicate_state, événements non publiés
 ```
 
@@ -98,16 +98,16 @@ class_name Command extends RefCounted             # faction: int, emitter: int ;
 class_name ValidationResult extends RefCounted    # permitted: bool, code: StringName, params: PackedInt64Array
 class_name CommandHandler extends RefCounted      # @abstract (option) ; une sous-classe par système propriétaire
 func validate(view: StateView, command: Command) -> ValidationResult
-func apply(state: GameState, command: Command, ctx: ApplyContext) -> ApplyResult   # ne rend jamais d'échec de jeu ; remonte révélé / ruine_lue
+func apply(state: GameState, command: Command) -> ApplyResult   # fonction de règle pure ; ne rend jamais d'échec de jeu ; remonte révélé / ruine_lue et les effets
 
 class_name CommandPipeline extends RefCounted
 func submit(command: Command) -> ValidationResult
 func check(command: Command) -> ValidationResult
 func preview(command: Command) -> PreviewResult        # faction = command.faction
-func apply_on(copy: GameState, command: Command, collector: EventCollector) -> ValidationResult
+func apply_on(copy: GameState, command: Command) -> ValidationResult   # effets jetés
 func on_state_loaded() -> void
 class_name PostCommitPort extends RefCounted            # on_commit(state, command, result) ; réel, nul
-class_name FragmentSource extends RefCounted            # read-only ; figée au rejeu
+class_name ProfilePort extends RefCounted               # apply(effect) -> bool (écriture réussie) ; réel, nul (rejeu)
 class_name CommandCodec extends RefCounted             # identifiants de type entiers stables
 ```
 
@@ -157,7 +157,7 @@ class_name CommandCodec extends RefCounted             # identifiants de type en
 ### Negative
 - 12 handlers typés et un enum à maintenir ; le style « données plus fonctions » est moins familier.
 - La complétude de `validate` repose sur des tests et la validation des invariants.
-- Une exception nommée à la règle 3 du GDD 1 (statut « validée »).
+- Une commande interne de plus (VALIDER_LA_LECTURE) et une liste de commandes de suite vidée en sortie de `submit` ; plus aucune exception à la règle 3 du GDD 1.
 - Un coût de `filtered_copy` pour chaque aperçu du joueur (une copie filtrée par appui, dans le budget de la formule 5).
 
 ## Risks
@@ -177,11 +177,11 @@ class_name CommandCodec extends RefCounted             # identifiants de type en
 | commandes-evenements.md (23) | Règles 8 à 12 : lot, révision, verrous | `EventSink`, `CommandGate`, préfixe de refus |
 | commandes-evenements.md (23) | Règles 13 à 15 : commandes internes, révision, annulation | SYS, `restore_from`, `UndoSlot` |
 | commandes-evenements.md (23) | Règles 16 et 17 : rejeu, données pures | `CommandLog`, `CommandCodec`, classes sans logique |
-| ruines-fragments.md (13) | Règle 14 a–g, règle 17 : séquence de lecture, fragment suivant | §5, `FragmentSource`, post-commit |
+| ruines-fragments.md (13) | Règle 14 a–g, règle 17 : séquence de lecture, fragment suivant | §5, instantané de la chronique, effet « enregistrer un fragment », `ProfilePort`, VALIDER_LA_LECTURE |
 | sauvegarde-automatique.md (16) | Règle 10 : sauvegarde avant le panneau, profil écrit après l'application | `PostCommitPort` avant `EventSink.push` |
 | ia-ennemie.md (9) | Règles 4 et 7 : aucune attaque sans intention ; règle 19 : copies | `AUCUNE_INTENTION`, §9, vue figée et `duplicate_state()` |
 | noeuds.md (11) | MONTER_NŒUD : six codes de refus, NŒUD_MONTÉ | 12e type de commande |
-| modele-etat-partie.md (1) | Règles 2, 3, 10, 14 : un écrivain, chemin unique, journal des lectures de ruine, révision | `apply` par propriétaires, exception nommée pour « validée » |
+| modele-etat-partie.md (1) | Règles 2, 3, 10, 14 : un écrivain, chemin unique, journal des lectures de ruine, révision | `apply` par propriétaires, effets rendus et appliqués par la couche des commandes, VALIDER_LA_LECTURE ordinaire |
 
 ## Performance Implications
 - **CPU**: validation plus application ≤ 0,3 ms par commande (provisoire) ; copie 15 µs mesurée sur PC (ADR-0003) ; une copie filtrée par aperçu du joueur ; un lot par commande.
@@ -196,7 +196,7 @@ Sans objet : aucun code de production n'existe.
 - AC du GDD 23 : refus ne change pas la révision, appliquée fait +1 ; annulation : révision = instantané + 2, journal non reculé ; aperçu = résultat ; copie ne publie pas ; commande depuis un gestionnaire refusée ; rejeu identique sur 100 exécutions (commandes JOUEUR, IA, SYS et une annulation ; refus en rejeu signalé).
 - **Aperçu sans fuite** : l'aperçu d'un déplacement qui traverse un ennemi caché ne montre ni arrêt ni unité cachée ; ATTAQUER sur copie filtrée égal à l'application réelle (AC-X1).
 - Parité `FactionView` / `filtered_copy` sur un corpus de fabrique ; non-fuite d'information par faction (AC-X2).
-- Lecture de ruine : ordre d'écriture, sauvegarde, profil, « validée » ; copie et rejeu sans écriture du profil (AC-RF19) ; rejeu avec `FragmentSource` figée (AC-RF28).
+- Lecture de ruine : ordre d'écriture, sauvegarde, profil, « validée » ; simulation et rejeu sans écriture du profil (AC-RF19, effet rendu puis jeté) ; rejeu avec `ProfilePort` nul et même fragment (AC-RF28).
 - Exécution d'intention sous une seule révision ; ATTAQUER émis par l'IA via `submit` refusé `AUCUNE_INTENTION` ; intention annulée : +1 et INTENTION_ANNULÉE.
 - MONTER_NŒUD : ordre des six refus ; préfixe commun de refus avec l'exception ABANDONNER ; test de démarrage : chaque type est enregistré.
 - `UndoSlot` remis à zéro au chargement (AC-X3) ; une sauvegarde ou une copie persistante ne se déclenche qu'après le commit (AC-04).

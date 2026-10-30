@@ -44,7 +44,7 @@ Le GDD 23 fixe que les événements d'une commande sont publiés en un lot aprè
 ### Constraints
 - GDScript, Godot 4.7.2 ; comportement des signaux et reprise des `await` non sourcés.
 - L'état est final avant tout événement ; perdre la file ne change jamais la partie (23, règle 9).
-- Une copie de simulation ne publie jamais d'événement (23, règle 8) ; l'aperçu de combat lit la liste des événements d'une copie, hors file (règle 7).
+- Une simulation ne publie jamais d'événement : seules les fonctions de la couche des commandes publient (23, règle 8 ; PR #3) ; l'aperçu de combat lit la liste des événements des effets rendus, hors file (règle 7).
 - Au plus 3 flashs par seconde (WCAG 2.3.1) ; état final immédiat en animations réduites.
 - Dépendances injectées, pas de singleton (`.claude/docs/coding-standards.md`).
 
@@ -59,7 +59,7 @@ Le GDD 23 fixe que les événements d'une commande sont publiés en un lot aprè
 
 **1. Événements typés.** Un événement est une classe `RefCounted` typée, une par fichier (`ColorTilesChanged`, `TilesRevealed`, `UnitMoved`, `UnitHit`, `RuinRead`, `IntentionAnnounced`…), héritant de `PresentationEvent` qui porte `event_id = (revision, index dans le lot)`. Elle ne contient que des identifiants et des tuiles (jamais de `Node`, `Callable` ni `RID`). Un `EventBatch` (`RefCounted`) porte `revision`, `command_id` et `events: Array[PresentationEvent]`. Ce format est le même pour la file, l'aperçu et les tests ; aucun `Dictionary`.
 
-**2. Puits d'événements injecté.** Le pipeline de commandes reçoit un `EventSink` (interface : `push(batch)`). L'application normale reçoit l'`EventQueue` ; une copie de simulation reçoit un `NullSink` ; l'aperçu de combat reçoit un collecteur local qui construit la liste sans la publier. Le pipeline ne connaît jamais la file par un nom global : « une copie ne publie jamais » est garanti structurellement.
+**2. Puits d'événements injecté.** Le pipeline de commandes reçoit un `EventSink` (interface : `push(batch)`). L'application normale reçoit l'`EventQueue` ; le rejeu reçoit un `NullSink` (les simulations n'appellent pas le pipeline : elles jettent les effets) ; l'aperçu de combat reçoit un collecteur local qui construit la liste sans la publier. Le pipeline ne connaît jamais la file par un nom global : « une copie ne publie jamais » est garanti structurellement.
 
 **3. File.** `EventQueue` (`RefCounted`, Core) est une file FIFO de lots bornée par `Q_max` = 256 événements (donnée). Si `len + B > Q_max`, elle est vidée et ne contient plus qu'un lot `RESYNCHRONISER`. Elle n'est jamais sauvegardée. Les révisions dépilées sont strictement croissantes.
 
@@ -74,7 +74,7 @@ Le GDD 23 fixe que les événements d'une commande sont publiés en un lot aprè
 
 **7. Resynchronisation et chargement.** Sur `RESYNCHRONISER` ou `ÉTAT_CHARGÉ`, dans cet ordre : vider la file, annuler (retour à `IDLE`), lever les verrous du joueur **sauf** `FRAGMENT_PANEL` si le panneau est déjà ouvert (hud-systeme, règle 16), appeler `rebuild_from_state(view)` sur chaque gestionnaire avec une `StateView` en lecture seule (affichage direct, aucune onde), puis traiter `ÉTAT_CHARGÉ` sans attente.
 
-**8. Commandes bloquées : deux notions distinctes.** `CommandGate` (`RefCounted`, Core, injecté, jamais sauvegardé ni copié, ignoré par les copies de simulation et le rejeu) porte : (a) une **garde de réentrance** armée seulement pendant l'appel synchrone de `handle()`, qui refuse **toute source** avec COMMANDES_VERROUILLÉES et signale une erreur en développement (23, règle 11) ; (b) des **verrous du joueur**, un ensemble de raisons (`ATTACK_RESOLUTION`, `FRAGMENT_PANEL`), posés par le séquenceur et valant pour la faction du joueur **seulement** (23, règle 12) ; l'IA et les commandes internes ne sont jamais bloquées par (b). Que les boutons soient inactifs hors idle (hud-systeme, règle 6) relève de l'interface (`sequencer.is_idle()`), pas du gate. `_exit_tree()` du séquenceur lève ses verrous. Le pipeline (Core) ne référence jamais le séquenceur : Presentation dépend de Core, jamais l'inverse.
+**8. Commandes bloquées : deux notions distinctes.** `CommandGate` (`RefCounted`, Core, injecté, jamais sauvegardé ni copié, ignoré par les simulations (qui n'appellent pas le pipeline) et le rejeu) porte : (a) une **garde de réentrance** armée seulement pendant l'appel synchrone de `handle()`, qui refuse **toute source** avec COMMANDES_VERROUILLÉES et signale une erreur en développement (23, règle 11) ; (b) des **verrous du joueur**, un ensemble de raisons (`ATTACK_RESOLUTION`, `FRAGMENT_PANEL`), posés par le séquenceur et valant pour la faction du joueur **seulement** (23, règle 12) ; l'IA et les commandes internes ne sont jamais bloquées par (b). Que les boutons soient inactifs hors idle (hud-systeme, règle 6) relève de l'interface (`sequencer.is_idle()`), pas du gate. `_exit_tree()` du séquenceur lève ses verrous. Le pipeline (Core) ne référence jamais le séquenceur : Presentation dépend de Core, jamais l'inverse.
 
 ### Architecture Diagram
 

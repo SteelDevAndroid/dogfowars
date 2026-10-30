@@ -77,10 +77,11 @@ monde », qui reprend le pilier 1 déjà porté par la recoloration.*
    phase ennemie : l'IA **exécute ou annule** les attaques qu'elle avait annoncées au
    tour n − 1 (jamais redirigées), joue ses autres coups par les commandes ordinaires,
    puis **annonce ses attaques du tour n + 1** → fin du tour (sauvegarde automatique, 16)
-   → tour n + 1. Une sauvegarde a aussi lieu **juste après « Fin du tour »**, avant la
-   phase ennemie : un arrêt de l'application pendant la phase ennemie ne fait jamais
-   rejouer son tour au joueur ; la phase ennemie est rejouée depuis cette sauvegarde, et
-   elle donne le même résultat parce que l'IA ne tire son hasard que dans l'état (9). « Intentions publiées » est une étape de la fin de la phase ennemie,
+   → tour n + 1. La partie est sauvegardée **après chaque commande, celles de l'IA
+   comprises** (décision du 2026-10-30, `design/gdd/modele-etat-partie.md`) : un arrêt de
+   l'application pendant la phase ennemie ne fait jamais rejouer son tour au joueur ; la
+   phase ennemie **reprend à la commande suivante**, l'IA décidant à partir de l'état seul
+   (9), et elle donne le même résultat qu'une phase sans interruption. « Intentions publiées » est une étape de la fin de la phase ennemie,
    **pas une phase stockée** (`design/gdd/modele-etat-partie.md`, mis à jour).
 4. **Aucune attaque au tour 1.** La phase ennemie du tour 1 n'exécute rien ; elle annonce
    pour le tour 2. Rien ne frappe sans avoir été annoncé.
@@ -305,9 +306,10 @@ de domination ; une domination plus tôt l'emporte.
 ### Arrêts, abandon, données
 
 - **Si l'application est tuée pendant la phase ennemie du tour n** : la partie reprend
-  depuis la sauvegarde faite juste après « Fin du tour » (règle 3) et rejoue la phase
-  ennemie, au même résultat ; le joueur ne rejoue pas son tour. Propriétaires : 16
-  (moment des sauvegardes), 9 (IA déterministe à partir de l'état).
+  depuis la sauvegarde qui suit la dernière commande appliquée (règle 3) et la phase
+  ennemie continue à la commande suivante, au même résultat ; le joueur ne rejoue pas son
+  tour. Propriétaires : 16 (moment des sauvegardes), 9 (IA qui reprend à partir de
+  l'état seul).
 - **Si le joueur abandonne pendant la phase ennemie** : permis, la pause l'étant
   partout ; ABANDONNER s'applique entre deux commandes de l'IA ; la partie passe à
   TERMINÉE (abandon), sans score. Confirmation : 18.
@@ -449,10 +451,10 @@ d'intégration dans `tests/integration/turns/` ; **[P]** simulation à graines f
   **THEN** les intentions de n − 1 sont exécutées ou annulées (jamais redirigées), puis
   l'IA joue, puis elle annonce pour n + 1, puis la partie est sauvegardée, puis le tour
   n + 1 commence ; aucune phase INTENTIONS_PUBLIÉES n'est jamais stockée.
-- **AC-04 (règle 3)** [I] — **GIVEN** la sauvegarde faite juste après « Fin du tour »,
-  **WHEN** l'application est tuée au milieu d'une phase ennemie où une unité est détruite,
-  puis la partie rechargée, **THEN** la phase ennemie est rejouée, l'état final est égal à
-  celui d'une partie sans interruption, et la phase du joueur n'est pas rejouée.
+- **AC-04 (règle 3)** [I] — **GIVEN** une phase ennemie où une unité est détruite,
+  **WHEN** l'application est tuée après une commande de l'IA quelconque puis la partie
+  rechargée, **THEN** la phase ennemie reprend à la commande suivante, l'état final est
+  égal à celui d'une partie sans interruption, et la phase du joueur n'est pas rejouée.
 - **AC-05 (règle 4)** [U] — **GIVEN** le tour 1, **WHEN** la phase ennemie s'exécute,
   **THEN** aucune attaque n'est exécutée et les annonces portent sur le tour 2.
 - **AC-06 (règle 5)** [U] — **GIVEN** un espion sur les commandes, **WHEN** un tour

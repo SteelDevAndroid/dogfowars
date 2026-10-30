@@ -86,10 +86,13 @@ les tours (3) ou l'IA (9), que le joueur ne voit jamais.
 | ABANDONNER | J | — | PARTIE_TERMINÉE (après confirmation dans le menu pause, 18 ; `design/gdd/tours-conditions-victoire.md`) |
 | ANNULER_LE_DÉPLACEMENT | J | — | RIEN_À_ANNULER, DÉPLACEMENT_A_RÉVÉLÉ, AUTRE_ACTION_DEPUIS |
 | COMMENCER_LE_TOUR, ANNONCER_LES_INTENTIONS, EXÉCUTER_UNE_INTENTION | SYS | faction ou intention | — (contrôlées par 3 et 9) |
+| VALIDER_LA_LECTURE | SYS | id de la ruine, faction | — (contrôlée par 13 : l'entrée du journal doit être « en attente » ; appliquée par la couche des commandes seulement, après une écriture réussie du profil) |
 
 La **lecture d'une ruine n'est pas une commande** : elle a lieu à la fin d'un
 DÉPLACEMENT sur la ruine (`design/ux/hud.md`, § 5), dans l'application de cette
-commande, avec la séquence de la règle 10 de `design/gdd/modele-etat-partie.md`.
+commande, avec la séquence de la règle 10 de `design/gdd/modele-etat-partie.md` : l'application rend
+l'effet « enregistrer un fragment » ; la couche des commandes l'applique au profil et, si
+l'écriture réussit, applique la commande interne VALIDER_LA_LECTURE.
 
 #### Règles
 
@@ -124,16 +127,17 @@ commande, avec la séquence de la règle 10 de `design/gdd/modele-etat-partie.md
    donc pas échouer (règle 3), et le brouillard garde sa surprise (pilier 5). L'IA est
    validée et prise en embuscade exactement comme le joueur.
 7. **L'aperçu est la commande sur une copie.** Un aperçu valide la commande, puis
-   l'applique sur une copie de simulation, par le même code. L'application **rend** la
+   l'applique sur une copie de l'état, par le même code. L'application **rend** la
    liste ordonnée de ses événements ; l'aperçu de combat du HUD lit les dégâts, la
    riposte, les PV restants et les destructions dans cette liste. Le combat étant
    déterministe (règle 7 du GDD 1), l'aperçu est le résultat.
 8. **Événements après la commande, jamais pendant.** Les événements d'une commande sont
    publiés en un seul lot, après son application complète, et portent la révision de
    l'état. Leur ordre est celui des écritures, collections parcourues par identifiant
-   croissant (règle 8 du GDD 1). **Une copie ne publie jamais ses événements** (règle 9
-   du GDD 1). La copie d'un aperçu construit quand même leur liste, que le HUD lit
-   (règle 7) ; les copies de simulation de l'IA peuvent ne pas la construire, pour
+   croissant (règle 8 du GDD 1). **Seule la couche des commandes publie** : les fonctions
+   de règle rendent leurs événements et leurs effets sous forme de valeurs, et une
+   simulation les jette (règles 3 et 9 du GDD 1). L'aperçu construit quand même la liste,
+   que le HUD lit (règle 7) ; les simulations de l'IA peuvent ne pas la construire, pour
    rester peu coûteuses.
 9. **Les événements ne portent que de la présentation.** Quand un événement est publié,
    l'état est déjà final. Aucun événement ne porte une information absente de l'état :
@@ -223,7 +227,7 @@ présentation par les événements ci-dessus.
 | REFUSÉE (fin) | REÇUE | Le résultat est rendu ; aucune révision, aucun événement |
 | VALIDÉE | REÇUE | La validation a réussi |
 | APPLIQUÉE | VALIDÉE | Les fonctions des propriétaires ont écrit ; révision + 1 ; liste d'événements rendue |
-| PUBLIÉE (fin) | APPLIQUÉE | Le lot d'événements entre dans la file (sauf copie de simulation) |
+| PUBLIÉE (fin) | APPLIQUÉE | Le lot d'événements entre dans la file (jamais pour une simulation ni un aperçu) |
 
 Un aperçu s'arrête à APPLIQUÉE, sur une copie. Il n'existe aucun retour en arrière après
 APPLIQUÉE, sauf ANNULER_LE_DÉPLACEMENT, qui est elle-même une nouvelle commande.
@@ -492,8 +496,8 @@ Le HUD (17) et les contrôles (4) consomment trois choses de ce système :
 
 | Document | Ce qui en est repris ou ce qui y est imposé |
 |---|---|
-| `design/gdd/modele-etat-partie.md` | Règles 2 (un écrivain par champ), 3 (chemin d'écriture unique), 7 (aucun tirage dans l'aperçu ; combat déterministe), 9 (copie de simulation sans événements), 11 (vue par faction pour l'IA), 12 (pas d'historique dans l'état) ; tranche « Journal des commandes » |
-| `design/gdd/profil-donnees-meta.md` | Règle 15 : une copie de simulation n'écrit jamais le profil ; la lecture d'une ruine passe par une commande (règle 10 du GDD 1) |
+| `design/gdd/modele-etat-partie.md` | Règles 2 (un écrivain par champ), 3 (chemin d'écriture unique), 7 (aucun tirage dans l'aperçu ; combat déterministe), 9 (simulation sans couche des commandes : effets jetés), 11 (vue par faction pour l'IA), 12 (pas d'historique dans l'état) ; tranche « Journal des commandes » |
+| `design/gdd/profil-donnees-meta.md` | Règle 15 : l'écriture du profil est un effet appliqué par la couche des commandes seulement ; la lecture d'une ruine rend l'effet « enregistrer un fragment » (règle 10 du GDD 1) |
 | `design/gdd/systems-index.md` | Notes TD-SYSTEM-BOUNDARY points 5 et 8 |
 | `design/ux/hud.md` | Boutons grisés, aperçu de combat, confirmation de l'attaque en deux appuis, journal du tour ennemi, zones tactiles |
 | `design/accessibility-requirements.md` | Protection contre l'appui involontaire (annulation du déplacement) ; équivalent visuel de chaque son |
@@ -591,8 +595,9 @@ et des auditeurs doublés enregistrent ce qu'ils reçoivent. Aucun test ne crée
 - **AC-X3** [I] — **GIVEN** un instantané ARMÉ, **WHEN** la partie est sauvegardée puis
   rechargée, **THEN** l'instantané est AUCUN et l'annulation est refusée avec
   RIEN_À_ANNULER.
-- **AC-X4** [I] — **GIVEN** une copie de simulation, **WHEN** une commande y est
-  appliquée, **THEN** les auditeurs doublés reçoivent 0 événement.
+- **AC-X4** [I] — **GIVEN** une simulation (fonctions de règle sans couche des commandes),
+  **WHEN** une règle y est appliquée, **THEN** les auditeurs doublés reçoivent 0 événement
+  et le stockage doublé 0 appel.
 - **AC-X5** [I] — **GIVEN** une file abandonnée pendant une pause, **WHEN** la partie
   reprend, **THEN** le modèle du HUD reconstruit depuis l'état est égal à celui obtenu en
   consommant tous les événements.

@@ -93,7 +93,7 @@ Le brouillard est porté par `fog` seul (pas d'indice de teinte « fond »). Sa 
 
 ```
  État de partie (1) ──événements (23)──► Séquenceur de présentation (ADR-0002)
-   octet couleur (15), visibilité (5)            │ lots, durée d'onde, fusion en animations réduites
+   couleur déduite (15), visibilité (5)          │ lots, durée d'onde, fusion en animations réduites
                                                   ▼
                               TileRenderer (nœud, Presentation)
                                ├─ WaveScheduler (RefCounted, pur) ── F3 F4 F5 F7, miroir CPU 8 floats/tuile
@@ -170,6 +170,7 @@ Contrat de données : le tableau de la section Decision. Le miroir CPU et le sha
 - Pas d'éditeur de tuiles visuel pour les cartes.
 - Dépendance à des API non couvertes par les références (données personnalisées, couleur d'instance, uniformes globaux) : le risque est porté par les vérifications 0 à 4.
 - Une dépendance ouverte sur la charge de l'événement de couleur (GDD 15/23) et sur ADR-0002.
+- **Alignement PR #3 (2026-10-30)** : l'état ne stocke ni couleur de tuile ni vision actuelle ; `couleur(état, vue, P)` est une fonction pure du GDD 15 (cache de couleur hors de l'état) et le miroir CPU du `TileRenderer` n'est jamais une donnée d'état. Au chargement, au `RESYNCHRONISER` et après `restore_from`, le renderer se remplit depuis ce cache reconstruit, sans onde ; en cours de partie il ne lit que l'événement de couleur.
 
 ## Risks
 - **`use_colors` en canvas_item** : `COLOR` pourrait être modulé ou limité à [0, 1]. *Atténuation* : Verification 0 avant le test Android ; repli : texture de données.

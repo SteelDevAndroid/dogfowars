@@ -38,12 +38,12 @@ Trois échecs à éviter : l'IA qui triche (elle voit ce qu'elle ne devrait pas)
 
 1. **Pas de phase d'annonce séparée.** L'annonce est la dernière étape de la phase ennemie du tour n ; le joueur voit les menaces pendant tout son tour n+1 ; elles sont exécutées au début de la phase ennemie du tour n+1.
 2. **Début de tour.** Drapeaux remis à zéro, revenu versé. Une unité qui porte une intention d'attaque ne se soigne pas (`unites-drones.md`, règle 6).
-3. **Perception.** (ADR-0005 : **une re-perception avant le plan de chaque unité**, dont le moment se déduit de l'état réel ; la copie figée n'est plus unique.) L'IA fige sa vue et construit l'état filtré (`brouillard-vision.md`, règle 25) : tuiles visibles et explorées, unités visibles seulement. Elle ne lit aucune information cachée : ni unités hors vue, ni ruines, ni dormants non vus. Elle met à jour ses pistes (règle 9).
+3. **Perception.** (ADR-0005 : **une re-perception avant le plan de chaque unité**, dont le moment se déduit de l'état réel ; la copie figée n'est plus unique.) L'IA fige sa vue et construit l'état filtré (`brouillard-vision.md`, règle 25) : tuiles visibles et explorées, unités visibles seulement. Ses simulations partent d'un état **reconstruit à partir de cette vue** (`modele-etat-partie.md`, règle 11) et appliquent les fonctions de règle sans passer par la couche des commandes, en jetant leurs effets. Elle ne lit aucune information cachée : ni unités hors vue, ni ruines, ni dormants non vus. Elle met à jour ses pistes (règle 9).
 4. **Exécution des intentions**, par identifiant d'intention croissant. Avant chaque commande, 9 teste les conditions d'annulation et n'émet ATTAQUER ou CAPTURER que si elles sont toutes bonnes : la commande n'est jamais refusée. Annulation d'une attaque : `AUTEUR_DÉTRUIT`, `CIBLE_DÉTRUITE`, `CIBLE_DÉPLACÉE` (même si la cible reste à portée, jamais redirigée), `HORS_DE_PORTÉE`. Annulation d'une capture : `UNITÉ_ABSENTE`, `UNITÉ_DÉTRUITE`, `NŒUD_DÉJÀ_À_L'IA`. Une unité qui exécute passe en « a agi » et ne bouge plus ce tour.
 5. **Coups ordinaires** : DÉPLACER, MONTER_NŒUD ; RECHERCHER n'existe pas au MVP (règle 24).
 6. **Annonce** (sauf au tour 30). Calculée sur les positions finales du tour. Une intention d'attaque n'est posée que si l'auteur est déjà à portée de la cible (Chebyshev ≤ portée, soit 1) : l'exécution ne comprend jamais de déplacement. Conséquence voulue : toute attaque de l'IA est retardée d'un tour et le joueur peut frapper l'auteur en premier (avantage de première frappe, `combat.md`, F6) ; l'IA évalue ce risque (terme « exposition »).
 7. **Invariant.** 23 refuse ATTAQUER et CAPTURER émis par l'IA hors d'une exécution d'intention (code `AUCUNE_INTENTION`) : aucune attaque sans intention stockée.
-8. **Fin de tour.** Sauvegarde (16).
+8. **Fin de tour.** La partie est sauvegardée après **chaque** commande de l'IA (16, règle 9, décision du 2026-10-30) ; la fin de tour n'ajoute que le passage à la phase du joueur. Un arrêt à n'importe quelle commande reprend à la commande suivante : l'IA décide **à partir de l'état seul** (tranches Intentions, Agents de l'IA, Pistes, drapeaux « a bougé » et « a agi »), sans mémoire hors de l'état. Les coups ordinaires reprennent au `curseur_ia` de la tranche « agents de l'IA » (id de la dernière unité qui a émis une commande ce tour) : une unité qui n'a rien fait avant le curseur n'est pas replanifiée avec un état changé (ADR-0005, §5).
 
 **B. Pistes et rôles**
 
@@ -71,7 +71,7 @@ Trois échecs à éviter : l'IA qui triche (elle voit ce qu'elle ne devrait pas)
 **D. Lisibilité et budget**
 
 18. **Une intention = un auteur, une cible, une tuile cible, un motif** (TRAQUE, REPRÉSAILLE, CAPTURE, DÉFENSE). Le marqueur « létale » est calculé par la même fonction que l'aperçu de combat. Si l'auteur est dans le brouillard, le marqueur est dessiné sur la tuile cible seulement ; une capture de nœud affiche son marqueur sur le nœud même s'il n'est pas visible.
-19. **Budget en comptage, jamais en millisecondes** (le tour doit être rejouable à l'identique après reprise) : copies ≤ 2 500 par tour (`modele-etat-partie.md`, formule 5), évaluations de formule pures ≤ `EVALS_MAX` = 20 000. La planification n'utilise presque pas de copies (environ une par unité plus K aperçus). Une unité par frame sur l'état figé.
+19. **Budget en comptage, jamais en millisecondes** (le tour doit reprendre à l'identique après un arrêt à n'importe quelle commande) : copies ≤ 2 500 par tour (`modele-etat-partie.md`, formule 5), évaluations de formule pures ≤ `EVALS_MAX` = 20 000. La planification n'utilise presque pas de copies (environ une par unité plus K aperçus). Une unité par frame sur l'état figé.
 20. **Dégradation.** À 70 % du budget : `K_DEST` passe de 6 à 2 ; à 100 % : les unités restantes rejoignent leur poste ou restent. ANNONCER n'est jamais sauté. Coupure `N_REFUS_MAX` = 32 ; avec les pré-contrôles tout refus est un bogue journalisé.
 
 **E. Tour 1, tour 30, ruines**
@@ -265,7 +265,7 @@ L'annonce doit tomber comme un avertissement lisible, non comme un piège : un t
 
 - **AC-IA31** (Logic, règle 14) **THEN** sur 100 exécutions de même état et même graine, les intentions sont identiques octet pour octet ; compteur de tirages à 0 avant et après ; aucun générateur aléatoire ni horloge système.
 - **AC-IA32** (Logic, règles 19 et 20, F2) **THEN** copies ≤ 2 500 et évaluations ≤ 20 000 sur tout tour type (8 Gardiens, `K_DEST` 6 : 384 évaluations par passe) ; à 70 % (14 000) `K_DEST` passe à 2 ; à 100 % les unités restantes rejoignent leur poste ou restent ; ANNONCER est toujours appelé ; budget compté, jamais mesuré en ms.
-- **AC-IA33** (Intégration, règle 19) **THEN** un arrêt en cours de tour d'IA (aucune sauvegarde n'a lieu pendant la phase ennemie ; le système des tours relance la phase depuis l'état d'après FINIR_LE_TOUR) rejoue le tour à l'identique (intentions, pistes, statuts, raisons, journal) sans exécution doublée. [BLOQUÉ 1]
+- **AC-IA33** (Intégration, règle 19) **THEN** un arrêt après la commande k d'un tour d'IA (la partie est sauvegardée après chaque commande ; le système des tours reprend la phase à la commande k + 1) donne le même tour qu'un tour sans arrêt (intentions, pistes, agents, statuts, raisons, journal) sans exécution doublée, pour tout k. [BLOQUÉ 1]
 
 ### G. Tour 1, tour 30, ruines, difficulté (règles 21 à 25)
 

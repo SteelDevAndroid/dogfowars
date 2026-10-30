@@ -23,7 +23,9 @@ tour 1. Ce système existe pour que la carte pose des questions (pilier 5) sans 
 
 Le brouillard décide ce que chaque faction sait de la carte. Pour chaque faction, il tient dans la
 tranche « Visibilité » de l'état (`design/gdd/modele-etat-partie.md`) deux informations par tuile :
-la tuile est-elle **vue maintenant**, et a-t-elle **déjà été découverte**. Il en tire trois états —
+a-t-elle **déjà été découverte**, et quel était son **dernier propriétaire vu**. La tuile est-elle **vue
+maintenant** n'est pas stockée : 5 la recalcule à partir des unités et des nœuds, dans un cache hors de
+l'état (décision du 2026-10-30, PR #3). Il en tire trois états —
 *inconnue*, *explorée*, *visible* — que chaque faction, l'IA comprise, est seule à lire : aucun
 système ne lit l'état brut en dehors de la vue de sa faction. Il possède la **portée de vue** de
 chaque source (unités, nœuds possédés), la règle de **révélation** (à chaque pas d'un
@@ -82,12 +84,14 @@ tour 1**. Les valeurs chiffrées sont des valeurs de départ [PROP].*
 
 **A. Données**
 
-1. **Tranche Visibilité, 2 octets par tuile et par faction** (budget déjà compté dans la formule 5 du
-   GDD 1). Octet 0, drapeaux : bit 0 `vue_maintenant`, bit 1 `découverte`, bit 2 `dormant_mémorisé`
+1. **Tranche Visibilité, 2 octets par tuile et par faction** (budget compté dans la formule 5 du
+   GDD 1). Octet 0, drapeaux : bit 1 `découverte`, bit 2 `dormant_mémorisé` (le bit 0 est toujours 0 dans l'état :
+   `vue_maintenant` vit dans le **cache de vue**, hors de l'état, même disposition de bits, reconstruit
+   depuis les sources au chargement et après `restore_from`)
    (règle 17). Octet 1 : `dernier_propriétaire_vu` (0 = aucun ou neutre, 1..F = faction). Indice de
    tuile = `tile_index`. 16 × 16 à deux factions : 256 × 2 × 2 = **1 024 octets** (576 en 12 × 12).
-2. **Invariants** : `vue_maintenant` implique `découverte` ; l'octet 1 vaut 0 tant que la tuile n'est pas
-   découverte ; `vue_maintenant` stocké = recalculé depuis les sources (validation de l'état, règle 14 du
+2. **Invariants** : le bit 0 stocké vaut 0 ; l'octet 1 vaut 0 tant que la tuile n'est pas découverte ;
+   après recalcul, toute tuile du cache `vue_maintenant` est `découverte` (validation de l'état, règle 14 du
    GDD 1, à chaque chargement et dans les tests).
 3. **Trois états dérivés** (jamais stockés) : VISIBLE si `vue_maintenant` ; EXPLORÉE si `découverte` et
    non `vue_maintenant` ; INCONNUE sinon. Ce sont les seuls que la vue d'une faction expose.
@@ -208,16 +212,17 @@ tour 1**. Les valeurs chiffrées sont des valeurs de départ [PROP].*
 23. **Territoire et vue.** La vue d'un nœud vaut au moins son rayon de territoire (règle 7) : son territoire
     est VISIBLE en entier, jamais atténué à son bord. Une tuile de territoire que plus aucune source ne
     couvre (nœud perdu) est EXPLORÉE, jamais INCONNUE.
-24. **Sauvegarde et chargement.** La tranche Visibilité est sérialisée telle quelle. Au chargement, le bit
-    `vue_maintenant` est **recalculé** depuis les sources et remplacé s'il diffère (trace au journal de
-    développement) ; `découverte` et l'octet 1 sont conservés ; le cache de champs de vue (règle 10) est
-    reconstruit depuis le terrain. Même sauvegarde, même vue.
+24. **Sauvegarde et chargement.** La tranche Visibilité est sérialisée telle quelle (`découverte`, octet 1,
+    `dormant_mémorisé`). Au chargement, le cache `vue_maintenant` est **reconstruit** depuis les sources ; si une
+    tuile du cache n'est pas `découverte`, ce bit est posé (trace au journal de développement) ; le cache de
+    champs de vue (règle 10) est reconstruit depuis le terrain. Même sauvegarde, même vue.
 
 24bis. **Exception : le score décisif (17, E07).** Le score exact des deux camps est le seul agrégat public calculé sur des données hors vue : il dit « combien », jamais « où ». Aucune décomposition ni aucun delta n'est affiché, il se met à jour à l'idle de début de tour sans animation de variation (`design/gdd/hud-systeme.md`, règles 4 et 23). La règle 4 du HUD (« vue du joueur seulement ») s'entend sauf cet agrégat.
 25. **Contrainte dure pour l'IA (9).** « L'IA ne triche pas » n'est vrai que si elle **planifie sur un état
     filtré à sa vue** : un état complet dont on saute seulement le recalcul de la vue connaîtrait encore la
-    position des unités cachées du joueur. Toute copie de simulation de l'IA ne contient donc que ce que sa vue
-    montre (tuiles VISIBLES et EXPLORÉES, unités visibles) ; aucune unité cachée du joueur n'y figure.
+    position des unités cachées du joueur. Toute simulation de l'IA part d'un état **reconstruit à partir de sa vue**
+    (règle 11 du GDD 1 : terrain découvert, unités visibles, propriétaires vus ; hors vue, ni unité, ni nœud, ni
+    propriétaire) ; aucune unité cachée du joueur n'y figure.
 
 ### Coût de calcul (estimations à mesurer)
 
@@ -284,7 +289,7 @@ The visibility_state formula is defined as:
 
 | Variable | Type | Range | Source | Description |
 |---|---|---|---|---|
-| b0 | bool | {0, 1} | calculated | Bit 0 de l'octet 0 : `vue_maintenant` |
+| b0 | bool | {0, 1} | calculated | Bit 0 du cache de vue (hors de l'état) : `vue_maintenant` |
 | b1 | bool | {0, 1} | calculated | Bit 1 : `découverte` |
 | état | énumération | {INCONNUE, EXPLORÉE, VISIBLE} | calculated | Jamais stocké (règle 3) |
 
@@ -431,9 +436,9 @@ The ruin_chip_distance formula is defined as:
 - **Si un déplacement ne révèle rien de neuf** (EXPLORÉE → VISIBLE seulement): `a_révélé` est faux, ANNULER est permis, la tranche Visibilité est restaurée. **Si un pas découvre une tuile INCONNUE autour d'une ruine**: vrai par (a). **Si la ruine est lue**: vrai par (e), annulation refusée.
 - **Si l'autre faction réveille un dormant hors de la vue du joueur**: le marqueur (bit 2) reste affiché jusqu'à ce que la tuile soit VISIBLE ; il est alors effacé s'il n'y a plus de dormant. Aucune fuite.
 - **Si une ruine est lue**: son marqueur est remplacé par le glyphe « lu » et elle sort de la puce ; la distance est recalculée sur les autres ; s'il n'en reste aucune, la puce est masquée.
-- **Si un chargement trouve un `vue_maintenant` stocké différent du recalcul**: la valeur recalculée remplace la valeur stockée, avec une trace au journal de développement ; `découverte` et l'octet 1 sont conservés ; si une tuile recalculée VISIBLE a `découverte` = 0, ce bit est posé (invariant b0 ⇒ b1) et la correction est journalisée.
+- **Si un chargement trouve un bit 0 stocké non nul**: il est ignoré et remis à 0, avec une trace au journal de développement ; le cache `vue_maintenant` est recalculé ; si une tuile recalculée VISIBLE a `découverte` = 0, ce bit est posé (invariant b0 ⇒ b1) et la correction est journalisée.
 - **Si une sauvegarde est rechargée puis resérialisée sans commande**: la tranche est identique octet pour octet (576 ou 1 024 octets) ; le cache de champs n'est ni écrit ni comparé.
-- **Si une faction est éliminée**: à l'élimination, tous ses `vue_maintenant` passent à 0 (tuiles EXPLORÉES) et elle n'est plus recalculée ; `découverte` et l'octet 1 sont conservés. À valider.
+- **Si une faction est éliminée**: à l'élimination, son cache `vue_maintenant` est vidé (tuiles EXPLORÉES) et elle n'est plus recalculée ; `découverte` et l'octet 1 sont conservés. À valider.
 - **Si le drapeau d'IA passive est actif**: la vue de l'IA est quand même recalculée à chaque commande listée (règle 9), car la validation et les tests la lisent ; elle ne sert à aucune décision.
 - **Si une source se trouve au bord d'une carte 16 × 16** (rayon 4 en (0, 0)): le champ est écrêté à x, y ∈ 0..15 : 25 tuiles au lieu de 81 ; aucun repli de l'autre côté.
 - **Si deux sources couvrent la même tuile à la même distance**: la tuile est posée une fois (union idempotente) ; l'octet 1 vient du propriétaire réel, non de la source.
@@ -589,8 +594,8 @@ validée par l'art-director ; **Appareil** = sur l'appareil cible. [BLOQUÉ n] =
 
 ### Règles
 
-- **AC-BR1** (Logic, règle 1) **GIVEN** une carte 12 × 12 et une 16 × 16, **WHEN** l'état est créé, **THEN** la tranche fait 2 octets par tuile et par faction ; bit 0 = `vue_maintenant`, bit 1 = `découverte`, bit 2 = `dormant_mémorisé`, octet 1 = propriétaire (0 = aucun).
-- **AC-BR2** (Logic, règle 2) **GIVEN** un état avec b0 = 1 et b1 = 0, ou octet 1 ≠ 0 sur une tuile non découverte, **WHEN** la validation tourne, **THEN** elle signale la corruption ; **GIVEN** un `vue_maintenant` stocké différent du recalcul, **THEN** elle le signale aussi.
+- **AC-BR1** (Logic, règle 1) **GIVEN** une carte 12 × 12 et une 16 × 16, **WHEN** l'état est créé, **THEN** la tranche fait 2 octets par tuile et par faction ; bit 0 stocké = 0 (`vue_maintenant` vit dans le cache hors de l'état), bit 1 = `découverte`, bit 2 = `dormant_mémorisé`, octet 1 = propriétaire (0 = aucun).
+- **AC-BR2** (Logic, règle 2) **GIVEN** un état avec bit 0 stocké = 1, ou octet 1 ≠ 0 sur une tuile non découverte, **WHEN** la validation tourne, **THEN** elle signale la corruption ; **GIVEN** un cache dont une tuile VISIBLE n'est pas `découverte` après recalcul, **THEN** elle le signale aussi.
 - **AC-BR3** (Logic, règle 3) **GIVEN** les 8 valeurs de l'octet 0, **THEN** l'état dérivé est celui de la formule 1 (voir AC-BR25), et aucune grille d'états n'existe dans la sérialisation (recherche statique).
 - **AC-BR4** (Logic, règle 4) **GIVEN** un nœud adverse vu puis perdu de vue, **WHEN** il change de propriétaire hors de vue sans que la faction le perde, **THEN** l'octet 1 garde l'ancien propriétaire ; aucun champ « niveau » n'existe dans la tranche.
 - **AC-BR5** (Logic, règle 5) **GIVEN** une tuile VISIBLE, **WHEN** une commande est appliquée, **THEN** son octet 1 vaut le propriétaire réel ; **GIVEN** une tuile non visible dont la faction regardante perd la propriété, **THEN** l'octet 1 est mis à jour aussitôt.
@@ -632,7 +637,7 @@ validée par l'art-director ; **Appareil** = sur l'appareil cible. [BLOQUÉ n] =
 - **AC-BR35** (Logic) Refus sur tuile non vue : octets identiques pour une cible cachée et une cible inexistante.
 - **AC-BR36** (Intégration) Intention visant une unité du joueur, auteur caché : le marqueur est sur la tuile du joueur et aucune position de l'auteur n'atteint le HUD. [BLOQUÉ 9, 17]
 - **AC-BR37** (Logic) **GIVEN** un dormant éveillé par l'autre faction hors de vue, **THEN** le bit 2 reste posé jusqu'à ce que la tuile soit VISIBLE, puis il est effacé.
-- **AC-BR38** (Logic) **GIVEN** un chargement avec `vue_maintenant` altéré, **THEN** il est recalculé, une trace est écrite au journal, `découverte` et octet 1 sont conservés ; si b0 est recalculé à 1 avec b1 = 0, b1 est posé et la correction journalisée.
+- **AC-BR38** (Logic) **GIVEN** un chargement avec bit 0 stocké altéré, **THEN** il est remis à 0 et le cache recalculé, une trace est écrite au journal, `découverte` et octet 1 sont conservés ; si b0 est recalculé à 1 avec b1 = 0, b1 est posé et la correction journalisée.
 - **AC-BR39** (Logic) Sauvegarde, chargement, resérialisation sans commande : tranche identique à l'octet.
 - **AC-BR40** (Logic) Même état et même commande, deux exécutions : octets identiques ; recherche statique : aucun flottant dans le module.
 - **AC-BR41** (Logic) Faction éliminée : vue figée en EXPLORÉE, `découverte` et octet 1 conservés ; IA passive : sa vue reste recalculée. [PROV]

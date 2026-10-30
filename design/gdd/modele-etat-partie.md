@@ -86,14 +86,14 @@ définit le sens de ses champs et les seules fonctions qui l'écrivent.
 |---|---|---|
 | En-tête de partie | Version du schéma, identifiant de partie, époque de réinitialisation du profil à la création, graine, compteur de tirages, compteurs d'identifiants (prochain id d'unité, de nœud, de ruine, d'intention), numéro de tour, T_MAX, drapeau « IA passive », phase en cours, faction active, statut de fin | 1 (schéma, identifiant, époque, graine, compteurs d'id) ; 3 (tour, T_MAX, IA passive, phase, faction active, statut de fin) |
 | Carte | Dimensions, terrain de chaque tuile (fixe pendant la partie), propriétaire de chaque tuile, couche d'ancrage de chaque tuile (NŒUD, RUINE ou aucun), dernier changement de propriétaire de chaque tuile (tour, propriétaire précédent, cause : capture, combat ou ruine), point d'intérêt de chaque tuile | 2 (dimensions, terrain, points d'intérêt) ; 11 (propriétaire et dernier changement) |
-| Visibilité | Pour chaque faction : tuiles déjà découvertes | 5 |
+| Visibilité | Pour chaque faction : tuiles déjà découvertes et **dernier propriétaire vu** de chaque tuile (mémoire du territoire hors de vue, 1 octet par tuile et par faction ; décision du 2026-10-30) ; la vision actuelle n'est pas stockée | 5 |
 | Unités | Par id : type, faction, position, PV, a bougé, a agi, endormie | 6 (le réveil de 7 et les PV du combat 8 passent par les fonctions de 6) |
 | Nœuds | Par id : position, propriétaire, niveau | 11 |
 | Ruines | Par id : position (tirée parmi 9 candidats, 3 zones de 3), zone, faction de mémoire (donnée du fichier de carte), lue ou non, tour de lecture (−1 si non lue), faction lectrice ; R figé à 3 ruines tirées | 13 (21 n'écrit que la mise en place initiale) |
 | Instantané de la chronique | Par faction en jeu : identifiants stables des fragments déjà trouvés à la création de la partie, copiés du profil (22) | 13 (écrit une seule fois, à la création ; jamais modifié ensuite) |
 | Factions | Par faction : stock d'énergie, ensemble trié des ids de protocoles acquis, recherche en cours (id, tours restants), éliminée ou non ; pour l'IA, protocoles reçus par le calendrier fixe (`arbre-protocoles.md`, règle 15) | 10 (stock) ; 12 (protocoles) ; 3 (éliminée) |
 | Intentions | Par id : unité auteur, tuile de l'auteur à l'annonce, type de cible (unité ou nœud), cible (id dans ce type), tuile de la cible à l'annonce, type d'action (attaque ou capture), motif (TRAQUE, REPRÉSAILLE, CAPTURE, DÉFENSE), tour d'annonce, tour d'exécution, statut (annoncée, exécutée, annulée), raison d'annulation (AUTEUR_DÉTRUIT, CIBLE_DÉTRUITE, CIBLE_DÉPLACÉE, HORS_DE_PORTÉE, UNITÉ_ABSENTE, UNITÉ_DÉTRUITE, NŒUD_DÉJÀ_À_L'IA) ; une intention par unité (`INTENT_CAP`, `ia-ennemie.md`, règle 15) ; compte de siège du dernier nœud | 9 |
-| Agents de l'IA | **Tranche privée à la faction de l'IA** (ADR-0005) : par Gardien, état de rôle (POSTE, TRAQUE, RETOUR ; CAPTURE, TIENT, RIPOSTE, SIÈGE), compteur « tours sans cible », poste, motif courant ; `filtered_copy(IA)` la garde, `filtered_copy(JOUEUR)` la retire ; écrite par l'application d'ANNONCER_LES_INTENTIONS | 9 |
+| Agents de l'IA | **Tranche privée à la faction de l'IA** (ADR-0005) : par Gardien, état de rôle (POSTE, TRAQUE, RETOUR ; CAPTURE, TIENT, RIPOSTE, SIÈGE), compteur « tours sans cible », poste, motif courant ; une valeur scalaire `curseur_ia` (id de la dernière unité de l'IA qui a émis une commande ce tour, 0 au début de la phase ennemie : point de reprise des coups ordinaires) ; `filtered_copy(IA)` la garde, `filtered_copy(JOUEUR)` la retire ; écrite par l'application d'ANNONCER_LES_INTENTIONS | 9 |
 | Pistes de l'IA | Au plus 16 entrées (id de l'unité du joueur, tuile, tour de vue, type), durée de vie 4 tours (`ia-ennemie.md`, règle 9) | 9 |
 | Rappels de présentation | Pour la dernière phase ennemie seulement : unités perdues (tuile, camp), tuiles perdues ; vidée à la fin du tour suivant du joueur ; **aucun effet de jeu** (ni le score, ni l'IA, ni la vue ne la lisent ; `hud-systeme.md`, règle 22) | 17 lit ; 6 et 11 écrivent |
 | Compteurs de score | Comptes bruts : nœuds tenus, unités détruites (les fragments lus se comptent dans le journal des lectures de ruine) | Chaque compte a le système qui le fait avancer (11, 8) ; 3 possède la formule du score |
@@ -199,7 +199,7 @@ l'animation, la sélection et tout ce qui est purement visuel. Une valeur qui se
     schéma ; un état d'une version plus ancienne est migré au chargement, un état d'une
     version plus récente est refusé. Ce système possède le schéma et le contrat
     « vers données / depuis données » ; la sauvegarde (16) possède les fichiers, l'écriture
-    atomique et le moment des sauvegardes. **Égalité profonde** (ADR-0003 : elle ignore les lignes mortes et la disposition interne ; `to_bytes` est déterministe et enveloppé d'une taille et d'une empreinte d'intégrité) : deux états sont égaux
+    atomique et le moment des sauvegardes. **Égalité profonde** (ADR-0003 : elle ignore les lignes mortes et la disposition interne ; `to_bytes` est déterministe et rend la charge utile seule ; l'enveloppe, la taille et l'empreinte d'intégrité relèvent de la sauvegarde, ADR-0006) : deux états sont égaux
     quand toutes leurs tranches ont les mêmes champs avec les mêmes valeurs, les
     collections indexées par identifiant étant comparées par identifiant (sans tenir
     compte de l'ordre interne) et les grilles case par case.
@@ -227,7 +227,7 @@ milieu de la résolution d'une commande est interdite : la sauvegarde sur pause
 enregistre le dernier état cohérent.*
 
 *Sauvegarde après chaque commande (décision du 2026-10-30) : la partie est enregistrée
-de façon atomique après chaque commande appliquée, du joueur ou de l'IA (environ 28 Ko,
+de façon atomique après chaque commande appliquée, du joueur ou de l'IA (environ 32 Ko,
 formule 5). Une fermeture forcée en plein tour ne perd au plus que la commande en cours,
 ce qui tient la promesse « poser le téléphone en plein tour ». Une reprise au milieu de
 l'exécution ennemie repart de la commande suivante : l'IA décide donc à partir de l'état
@@ -348,7 +348,7 @@ décision de l'IA (9).
 
 The state_size formula is defined as:
 
-`S_raw = 64 + T×6 + T×F + U×16 + N×8 + R×8 + I×24 + F×64 + F×P×2` (octets)
+`S_raw = 64 + T×6 + T×F×2 + U×16 + N×8 + R×8 + I×24 + F×64 + F×P×2` (octets)
 
 `N_clones_max = floor(T_ai × f_clone / t_clone)`
 
@@ -368,15 +368,15 @@ The state_size formula is defined as:
 
 Estimations par entité : tuile 6 octets (propriétaire, dernier changement : tour,
 propriétaire précédent et cause, point d'intérêt ; le terrain est partagé, la couleur
-est déduite), tuile découverte 1 octet par tuile et par faction, unité 16, nœud 8,
+est déduite), visibilité 2 octets par tuile et par faction (découverte, dernier propriétaire vu), unité 16, nœud 8,
 ruine 8, intention 24, fragment de l'instantané 2.
 
-**Output Range:** environ 7 Ko de données brutes au maximum ; environ 28 Ko sur disque
+**Output Range:** environ 8 Ko de données brutes au maximum ; environ 32 Ko sur disque
 avec un format texte (facteur 4). Le surcoût réel des Dictionary et Object de Godot 4.7
 n'est pas couvert par la référence (NOT SOURCEABLE ; il peut multiplier ces chiffres par
 10 à 50) : ces valeurs servent de budget à vérifier, pas de garantie.
-**Example:** T = 256, F = 4, U = 60, N = 10, R = 20, I = 120, P = 12 → 7 056 octets,
-environ 7 Ko. Avec
+**Example:** T = 256, F = 4, U = 60, N = 10, R = 20, I = 120, P = 12 → 8 080 octets,
+environ 8 Ko. Avec
 t_clone = 200 µs et f_clone = 25 % : floor(2000 ms × 25 % / 0,2 ms) = 2 500 copies par
 tour d'IA.
 

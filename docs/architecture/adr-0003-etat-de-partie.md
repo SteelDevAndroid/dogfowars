@@ -44,7 +44,7 @@ Le GDD 1 fixe le contenu de l'état (règles 1 à 14) et renvoie à un ADR la re
 ### Constraints
 - GDScript, Godot 4.7.2 ; Android d'abord ; cartes jusqu'à 16×16 (256 tuiles), 60 unités, 10 nœuds, 3 ruines tirées sur 9 candidates, 120 intentions.
 - Données pures (règle 4), identifiants jamais réutilisés (règle 5), entiers seulement (règle 6), itération par id croissant (règle 8), copie sans partage (règle 9), taille bornée (règle 12), sérialisation sans perte avec version de schéma (règle 13).
-- Une copie de simulation ne publie aucun événement et n'écrit aucun profil (règles 8 et 9 du GDD 23).
+- Une simulation applique les fonctions de règle sans passer par la couche des commandes et jette leurs effets : elle ne publie aucun événement et n'écrit aucun profil (règles 3 et 9 du GDD 1, mis à jour par la PR #3 ; règles 8 et 9 du GDD 23).
 
 ### Requirements
 - Copie complète en quelques dizaines de microsecondes sur mobile.
@@ -55,15 +55,15 @@ Le GDD 1 fixe le contenu de l'état (règles 1 à 14) et renvoie à un ADR la re
 
 **Représentation.** `GameState` (`RefCounted`) porte des **tranches** ; chaque tranche est un ensemble de **colonnes** `PackedInt32Array` ou `PackedByteArray` :
 - **En-tête** : un **`PackedInt64Array`** à indices nommés par constantes (version du schéma, identifiants de partie, compteurs d'identifiants, graine, compteur de tirages, tour, phase…). Une graine de 0 à 2³²−1 ne tient pas dans un `PackedInt32Array` signé (4294967295 y devient −1) ; les compteurs `counter` et `next_id` sont bornés à 2³¹−1 et tiennent.
-- **Carte, visibilité, couleur** : une grille indexée par `tile_index` (propriétaire, ancrage, point d'intérêt, octet de couleur, deux octets de visibilité par faction). Le **terrain** est une colonne fixe pour toute la partie, partagée en lecture seule entre copies.
-- **Unités, nœuds, ruines, intentions, pistes de l'IA, rappels de présentation, journal des lectures de ruine** : des colonnes parallèles, une ligne par entité. Les **ids sont triés par ordre croissant** et jamais réutilisés (ils restent consommés) ; une entité détruite est marquée (`alive = 0`) pendant le tour, puis **toutes les collections sont compactées en fin de tour par un tri stable**, id croissant préservé : la taille reste bornée (règle 12 du GDD 1). Les unités, dormants compris, sont toutes créées à la mise en place (un réveil change un drapeau, pas une ligne). La recherche par id se fait par **dichotomie** (pas d'index direct).
-- **Contrôle d'accès (par convention vérifiée, pas par le langage)** : GDScript n'a pas de contrôle d'accès. Les colonnes sont regroupées **par tranche dans une classe** (`UnitsSlice`, `NodesSlice`, …) dont les champs sont préfixés `_` ; seules les fonctions d'écriture du système propriétaire y écrivent (règle 2 du GDD 1). Une règle grep en CI interdit l'écriture d'un champ `_` hors de sa tranche ; le motif interdit `direct_cross_system_state_write` est enregistré.
+- **Carte, visibilité** : une grille indexée par `tile_index` (propriétaire, dernier changement de propriétaire : tour, propriétaire précédent et cause, ancrage, point d'intérêt ; deux octets de visibilité par faction : découverte et dernier propriétaire vu). **Ni la couleur affichée ni la vision actuelle ne sont stockées** (PR #3) : la couleur est déduite par le GDD 15 et la vision recalculée par le GDD 5, toutes deux dans des caches hors de l'état, reconstruits au chargement et après `restore_from`. Le **terrain** est une colonne fixe pour toute la partie, partagée en lecture seule entre copies.
+- **Unités, nœuds, ruines, intentions (avec type et tuiles de la cible), agents et pistes de l'IA, rappels de présentation, instantané de la chronique, journal des lectures de ruine** : des colonnes parallèles, une ligne par entité. Les **ids sont triés par ordre croissant** et jamais réutilisés (ils restent consommés) ; une entité détruite est marquée (`alive = 0`) pendant le tour, puis **toutes les collections sont compactées en fin de tour par un tri stable**, id croissant préservé : la taille reste bornée (règle 12 du GDD 1). Les unités, dormants compris, sont toutes créées à la mise en place (un réveil change un drapeau, pas une ligne). La recherche par id se fait par **dichotomie** (pas d'index direct).
+- **Contrôle d'accès (par convention vérifiée, pas par le langage)** : GDScript n'a pas de contrôle d'accès. Les colonnes sont regroupées **par tranche dans une classe** (`UnitsSlice`, `NodesSlice`, …) dont les champs sont préfixés `_` ; seules les fonctions d'écriture du système propriétaire y écrivent (règle 2 du GDD 1). Un contrôle en CI (`tools/ci/check-slice-writes.sh`, auto-test `tests/unit/ci/test_check_slice_writes.sh`, workflow `.github/workflows/slice-writes.yml`) interdit tout accès à un champ `_` hors des chemins listés par la ligne `# owner:` du fichier de sa tranche ; le motif interdit `direct_cross_system_state_write` est enregistré.
 - **`StateView`** (déclarée ici) est une façade en lecture seule qui rend des **scalaires ou des copies**, jamais une colonne brute (les tableaux typés sont passés par référence : un lecteur pourrait écrire dans l'état). Le **terrain** vit dans un objet statique sans setter, partagé en lecture seule entre copies.
 - **Table déclarative des colonnes** : une table unique (nom, type, tranche propriétaire, **attribut « privé à la faction »** : une tranche privée n'est gardée que par `filtered_copy` de sa faction ; la tranche « agents de l'IA » en est une, ADR-0005) dont dérivent les indices, la copie, l'égalité, la sérialisation et la validation ; c'est la parade à l'erreur d'indexation.
 
-**Copie.** `GameState.duplicate_state()` appelle `duplicate()` sur chaque colonne (42 colonnes dans le banc) ; le terrain est partagé par référence. Une copie porte un drapeau « simulation », **simple donnée** que lisent le pipeline et l'écriture du profil pour s'interdire d'écrire le profil et de publier ; l'état ne connaît ni le puits d'événements ni les gestionnaires (ADR-0002). `restore_from(snapshot)` remet l'état à un instantané (annulation du déplacement, règle 15 du GDD 23) **en conservant la tranche « journal des commandes »** : la révision n'est jamais reculée (règle 14) et avance de 1 après l'annulation.
+**Copie.** `GameState.duplicate_state()` appelle `duplicate()` sur chaque colonne (42 colonnes dans le banc) ; le terrain est partagé par référence. Une copie **ne porte aucun drapeau** (PR #3) : une simulation n'écrit pas le profil ni ne publie parce qu'elle n'appelle que les fonctions de règle, pures, et jette les effets qu'elles rendent ; seule la couche des commandes les applique (ADR-0004). L'état ne connaît ni le puits d'événements ni les gestionnaires (ADR-0002). `restore_from(snapshot)` remet l'état à un instantané (annulation du déplacement, règle 15 du GDD 23) **en conservant la tranche « journal des commandes »** : la révision n'est jamais reculée (règle 14) et avance de 1 après l'annulation.
 
-**Copie filtrée.** `filtered_copy(faction) -> GameState` retire aussi les **tranches privées d'une autre faction** (par exemple `filtered_copy(JOUEUR)` ne contient aucune ligne d'agent de l'IA) et construit, par le **même code** que l'aperçu et la copie de simulation, l'état vu par une faction : lignes cachées (unités hors de vue, ruines non repérées, dormants jamais vus) absentes ou masquées, octets de visibilité des autres factions neutralisés. Son coût se paie une fois par perception, pas par copie ; il est à mesurer (Verification 10) ; AC-IA14 : aucune unité cachée ni ruine dans la copie filtrée.
+**Copie filtrée.** `filtered_copy(faction) -> GameState` retire aussi les **tranches privées d'une autre faction** (par exemple `filtered_copy(JOUEUR)` ne contient aucune ligne d'agent de l'IA) et construit, par le **même code** que l'aperçu, l'état **reconstruit à partir de la vue** d'une faction (règle 11 du GDD 1, base de toute simulation de l'IA) : lignes cachées (unités hors de vue, ruines non repérées, dormants jamais vus) absentes ou masquées, octets de visibilité des autres factions neutralisés. Son coût se paie une fois par perception, pas par copie ; il est à mesurer (Verification 10) ; AC-IA14 : aucune unité cachée ni ruine dans la copie filtrée.
 
 **Parcours et égalité.** Toute règle parcourt les lignes dans l'ordre des colonnes, qui est l'ordre croissant des ids : aucun `Dictionary` n'est parcouru pour une règle de jeu. **L'égalité profonde** compare les lignes **vivantes** par identifiant, sans tenir compte des lignes mortes ni de la disposition interne, comme la règle 13 du GDD 1 (hors drapeau de copie).
 
@@ -76,9 +76,9 @@ Le GDD 1 fixe le contenu de l'état (règles 1 à 14) et renvoie à un ADR la re
 ```
  GameState (RefCounted)
    ├─ en-tête (PackedInt32Array, indices nommés)
-   ├─ carte / couleur / visibilité  (colonnes par tile_index ; terrain partagé en lecture seule)
-   ├─ unités, nœuds, ruines, intentions, pistes, rappels, journal  (colonnes triées par id croissant)
-   ├─ duplicate_state() ── duplicate() de chaque colonne ──► copie (drapeau simulation)
+   ├─ carte / visibilité  (colonnes par tile_index ; terrain partagé en lecture seule ; ni couleur ni vision actuelle)
+   ├─ unités, nœuds, ruines, intentions, agents, pistes, rappels, instantané de la chronique, journal  (colonnes triées par id croissant)
+   ├─ duplicate_state() ── duplicate() de chaque colonne ──► copie (sans drapeau)
    ├─ to_bytes() / from_bytes()  ── var_to_bytes, schéma versionné, migration
    └─ StateView (lecture seule, ADR-0002) ◄── HUD, rendu, audio
  Écriture : fonctions des systèmes propriétaires uniquement (règle 2 du GDD 1)
@@ -88,8 +88,8 @@ Le GDD 1 fixe le contenu de l'état (règles 1 à 14) et renvoie à un ADR la re
 
 ```gdscript
 class_name GameState extends RefCounted
-func duplicate_state(simulation: bool = true) -> GameState
-func equals(other: GameState) -> bool                      # égalité profonde, hors drapeau de copie
+func duplicate_state() -> GameState
+func equals(other: GameState) -> bool                      # égalité profonde, hors disposition interne
 func to_bytes() -> PackedByteArray                         # var_to_bytes sans objets
 static func from_bytes(bytes: PackedByteArray) -> GameState  # migre ou refuse selon le schéma
 func filtered_copy(faction: int) -> GameState               # état vu par une faction (lignes cachées absentes ou masquées)

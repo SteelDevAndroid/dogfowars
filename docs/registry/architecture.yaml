@@ -103,7 +103,7 @@ state_ownership:
     status: active
     owner_system: map-slice
     adr: docs/architecture/adr-0003-etat-de-partie.md
-    interface: "Carte, couleur et visibilité (colonnes par tile_index ; terrain partagé en lecture seule, objet statique sans setter) ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
+    interface: "Carte (propriétaire, dernier changement de propriétaire, ancrage, point d'intérêt) et visibilité (découverte, dernier propriétaire vu) ; ni couleur ni vision actuelle stockées (PR #3 : déduites par 15 et 5, caches hors de l'état) ; colonnes par tile_index ; terrain partagé en lecture seule, objet statique sans setter) ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
     write_access: owner-system-only
     referenced_by:
       - docs/architecture/adr-0003-etat-de-partie.md
@@ -136,7 +136,7 @@ state_ownership:
     status: active
     owner_system: ruins-slice
     adr: docs/architecture/adr-0003-etat-de-partie.md
-    interface: "Ruines et journal des lectures de ruine ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
+    interface: "Ruines, instantané de la chronique (écrit une seule fois à la création) et journal des lectures de ruine ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
     write_access: owner-system-only
     referenced_by:
       - docs/architecture/adr-0003-etat-de-partie.md
@@ -147,7 +147,7 @@ state_ownership:
     status: active
     owner_system: ai-agents-slice
     adr: docs/architecture/adr-0005-ia-ennemie.md
-    interface: "Tranche privée à la faction de l'IA : états de rôle, compteur « tours sans cible », poste, motif courant ; écrite par l'application d'ANNONCER_LES_INTENTIONS ; filtered_copy(IA) la garde, filtered_copy(JOUEUR) la retire ; pistes et siège restent dans la tranche Intentions, IA passive dans l'en-tête"
+    interface: "Tranche privée à la faction de l'IA : états de rôle, compteur « tours sans cible », poste, motif courant ; valeur scalaire curseur_ia (point de reprise des coups ordinaires, ADR-0005 §5) ; écrite par l'application d'ANNONCER_LES_INTENTIONS et de chaque commande de l'IA ; filtered_copy(IA) la garde, filtered_copy(JOUEUR) la retire ; pistes et siège restent dans la tranche Intentions, IA passive dans l'en-tête"
     write_access: ai-system-only
     referenced_by:
       - docs/architecture/adr-0005-ia-ennemie.md
@@ -214,7 +214,7 @@ state_ownership:
     status: active
     owner_system: profile-system
     adr: docs/architecture/adr-0006-sauvegarde.md
-    interface: "Profil (GDD 22) : chronique, déblocages, meilleurs scores, réglages ; écrit par le système 22 via ProfileStore.request_write() puis SaveStore ; copies de simulation : port nul"
+    interface: "Profil (GDD 22) : chronique, déblocages, meilleurs scores, réglages ; écrit par le système 22 via ProfileStore.request_write() puis SaveStore, sur effet appliqué par la couche des commandes (ProfilePort) ; simulations : effets jetés, rejeu : port nul"
     write_access: profile-system-only
     referenced_by:
       - docs/architecture/adr-0006-sauvegarde.md
@@ -307,7 +307,7 @@ interfaces:
     consumers:
       - presentation-sequencer
     adr: docs/architecture/adr-0002-evenements-de-presentation.md
-    signal_signature: "EventSink.push(batch: EventBatch) ; EventQueue.pop() -> EventBatch (null si vide) ; NullSink pour les copies de simulation"
+    signal_signature: "EventSink.push(batch: EventBatch) ; EventQueue.pop() -> EventBatch (null si vide) ; NullSink pour le rejeu ; les simulations n'appellent pas le pipeline"
     referenced_by:
       - docs/architecture/adr-0002-evenements-de-presentation.md
     added: 2026-10-30
@@ -656,10 +656,10 @@ forbidden_patterns:
     adr: docs/architecture/adr-0006-sauvegarde.md
     added: 2026-10-30
 
-  - pattern: match_save_during_enemy_phase
+  - pattern: ai_decision_outside_state
     status: active
-    description: "La partie n'est jamais sauvegardée pendant la phase ennemie, hors fin de partie et abandon ; le profil continue d'être écrit."
-    why: "Règle 9 du GDD 16 : le tour d'IA est rejoué depuis son début après un arrêt."
+    description: "Le prochain coup de l'IA se décide à partir de l'état seul (agents, intentions, pistes, curseur_ia, drapeaux d'unités) ; la partie est sauvegardée après chaque commande de l'IA et la phase reprend à la commande suivante."
+    why: "Décision du 2026-10-30 (PR #3, GDD 16 règle 9) : un arrêt en plein tour d'IA ne perd au plus que la commande en cours."
     adr: docs/architecture/adr-0006-sauvegarde.md
     added: 2026-10-30
 

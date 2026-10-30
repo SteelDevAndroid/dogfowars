@@ -113,18 +113,22 @@ sont renvoyés à l'ADR de persistance.*
 8. **Déclencheurs** (décision du 2026-10-29) :
    - après **chaque commande du joueur** appliquée, annulation et abandon compris ;
    - juste après « Fin du tour », **avant** la première commande de l'IA ;
+   - après **chaque commande de l'IA** et chaque commande interne appliquée pendant la
+     phase ennemie (décision du 2026-10-30, `design/gdd/modele-etat-partie.md`) ;
    - à FIN_DE_TOUR, **après** la commande COMMENCER_LE_TOUR du joueur suivante, pour que
      le fichier se recharge directement sur la main du joueur ;
    - à la fin de la partie (une seule écriture, y compris au tour 30) ;
    - au mieux, au passage en arrière-plan (notification du cycle de vie Android : NOT
      SOURCEABLE).
-9. **Rien pendant la phase ennemie.** Les commandes de l'IA et les commandes internes ne
-   déclenchent aucune sauvegarde de la partie, même au passage en arrière-plan. La
-   sauvegarde faite juste après « Fin du tour » reste la référence ; si l'application est
-   tuée pendant la phase ennemie, le chargement **relance automatiquement la phase
-   ennemie** depuis elle (`design/gdd/tours-conditions-victoire.md`, règle 3). Le profil,
-   lui, continue d'être écrit. Un abandon pendant la phase ennemie est une commande du
-   joueur : il sauvegarde la partie terminée.
+9. **Phase ennemie : une sauvegarde par commande.** Les commandes de l'IA et les
+   commandes internes déclenchent la sauvegarde comme celles du joueur (règle 8) ;
+   l'écriture coalescée de la règle 5 limite le coût quand l'IA enchaîne ses ordres. Si
+   l'application est tuée pendant la phase ennemie, le chargement **reprend la phase à la
+   commande suivante** (`design/gdd/tours-conditions-victoire.md`, règle 3) : l'IA décide
+   à partir de l'état seul (`design/gdd/ia-ennemie.md`). Un abandon pendant la phase
+   ennemie est une commande du joueur : il sauvegarde la partie terminée. *Remplace la
+   règle « rien pendant la phase ennemie » du 2026-10-29 ; le budget de la règle 7 doit
+   tenir à ce rythme (AC-F1 à mesurer sur l'appareil, ADR-0006).*
 10. **Lecture d'une ruine** (séquence de la règle 10 de `design/gdd/modele-etat-partie.md`) :
     la commande s'applique avec l'entrée du journal « en attente » ; la partie est
     sauvegardée ; le profil enregistre le fragment et est écrit ; l'entrée passe à
@@ -165,6 +169,32 @@ sont renvoyés à l'ADR de persistance.*
     lectures de ruine restent « en attente ».
 17. **Version plus ancienne** : la migration s'applique, le résultat est validé puis
     réécrit, l'ancien fichier devenant la copie de secours.
+17bis. **Partie en cours quand une mise à jour change le format** (décision du 2026-10-30).
+    Tout changement de la table des colonnes de l'état (GDD 1, règle 13) ou du contenu
+    d'une tranche incrémente le numéro de schéma ; l'enveloppe, elle, garde son préfixe
+    figé (ADR-0006). Ce qui arrive aux parties en cours dépend du moment :
+    - **Avant le premier build du test fermé** : aucune migration n'est exigée. Une partie
+      d'un schéma plus ancien sans migration est **mise de côté** (renommée, jamais
+      supprimée, `BAD_FILE_CAP` respecté) avec le message « une mise à jour a changé le
+      format de la partie, elle ne peut pas être reprise » ; le jeu propose une nouvelle
+      partie. Le profil n'est pas touché (il a sa propre version, GDD 22, règle 3).
+    - **À partir du premier build du test fermé** : chaque incrément de schéma livre une
+      **migration du schéma précédent vers le nouveau**, pure et déterministe, testée sur
+      un fichier de l'ancienne version conservé comme fixture ; les migrations s'enchaînent
+      (N → N + 1 → …). Un build sans migration pour un incrément de schéma échoue en CI.
+    - **Migration en échec** (validation des invariants refusée) : la partie est mise de
+      côté comme ci-dessus, avec le même message et une nouvelle partie proposée ; jamais de
+      réparation silencieuse ni de perte du fichier.
+    - **Valeurs d'équilibrage** (données hors schéma, `assets/data/`) : leur changement
+      n'incrémente pas le schéma ; une partie en cours reprend avec les valeurs de la
+      nouvelle version. Les identifiants stockés dans l'état (fragments, protocoles) ne
+      sont jamais réutilisés ni renumérotés : retirer un contenu qu'une partie référence
+      est un changement de schéma.
+    - **Jamais de reprise au milieu d'une phase ennemie sur un schéma migré** : une partie
+      migrée reprend à sa dernière commande comme toute autre ; si la migration ne peut
+      pas garantir la reprise de la phase ennemie (changement de règles de l'IA), la
+      partie est ramenée à l'état d'après FINIR_LE_TOUR du tour courant, qui est toujours
+      valide.
 
 #### Sauvegarde automatique d'Android
 
@@ -207,7 +237,7 @@ Les états de contenu du profil (NEUF, ACTIF…) appartiennent à
 | # | Système | Ce qu'il fournit à la sauvegarde | Ce que la sauvegarde fait pour lui |
 |---|---|---|---|
 | 1 | Modèle d'état de partie | Sérialisation, validation, journal des lectures de ruine | Déclenche les écritures ; réconcilie au chargement |
-| 3 | Tours et conditions de victoire | Moments de sauvegarde (« Fin du tour », FIN_DE_TOUR, fin de partie) | Sauvegarde ; relance la phase ennemie au chargement si besoin |
+| 3 | Tours et conditions de victoire | Moments de sauvegarde (chaque commande, « Fin du tour », FIN_DE_TOUR, fin de partie) | Sauvegarde ; fait reprendre la phase ennemie à la commande suivante au chargement |
 | 13 | Ruines et fragments | Séquence de lecture d'une ruine | Partie d'abord, puis profil |
 | 18 | Menus et écrans | Continuer, nouvelle partie, réinitialisation | Suppression ordonnée ; avertissements |
 | 19 | Réglages | — | Profil chargé avant le premier écran |
@@ -344,9 +374,9 @@ The load_ok formula is defined as:
 
 ### Cycle de vie et sauvegarde Android
 
-- **Si l'application passe en arrière-plan pendant la phase ennemie** : la partie n'est
-  pas sauvegardée (règle 9) ; après un arrêt, la phase ennemie se rejoue depuis la
-  sauvegarde qui suit « Fin du tour » ; sans arrêt, la partie reprend depuis la mémoire.
+- **Si l'application passe en arrière-plan pendant la phase ennemie** : la dernière
+  commande appliquée est déjà sauvegardée (règle 9) ; après un arrêt, la phase ennemie
+  reprend à la commande suivante ; sans arrêt, la partie reprend depuis la mémoire.
 - **Si Android ne restaure que le profil sur un nouveau téléphone** : pas de partie, pas
   de « Continuer » ; c'est le cas normal.
 - **Si un fichier de partie est restauré malgré l'exclusion** : une partie dont l'époque
@@ -376,7 +406,7 @@ The load_ok formula is defined as:
 
 | Système | Ce qu'il utilise | Dure ou souple |
 |---|---|---|
-| 3 Tours et conditions de victoire | Sauvegardes aux moments du tour ; relance de la phase ennemie au chargement | Dure |
+| 3 Tours et conditions de victoire | Sauvegardes aux moments du tour ; reprise de la phase ennemie au chargement | Dure |
 | 13 Ruines et fragments | Ordre partie puis profil pour une lecture de ruine | Dure |
 | 18 Menus et écrans | Continuer, nouvelle partie, réinitialisation, avertissements | Dure |
 | 19 Réglages et accessibilité | Profil chargé avant le premier écran | Dure |
@@ -443,7 +473,7 @@ automatique, texte ≥ 14 pt).
 | `design/gdd/game-concept.md` | Technical Considerations (état en données pures, sauvegarde automatique, reprise sans perte après un arrêt) ; MVP Definition point 8 |
 | `design/gdd/modele-etat-partie.md` | Règles 10 (journal), 12 (instantané hors de l'état), 13 (schéma, égalité profonde), 14 (validation) ; mis à jour |
 | `design/gdd/profil-donnees-meta.md` | Règles 1 (sauvegarde automatique d'Android), 3 (version), 4 à 6 (écriture), 11 (réinitialisation) |
-| `design/gdd/tours-conditions-victoire.md` | Règle 3 (sauvegarde après « Fin du tour », relance de la phase ennemie) ; fin de partie |
+| `design/gdd/tours-conditions-victoire.md` | Règle 3 (sauvegarde après chaque commande, reprise de la phase ennemie) ; fin de partie |
 | `design/gdd/commandes-evenements.md` | Règles 4 (jamais au milieu d'une commande), 10 (file jamais sauvegardée), 15 (instantané d'annulation) |
 | `design/gdd/carte-tuiles-terrain.md` | Une sauvegarde garde son propre terrain |
 | `docs/engine-reference/godot/breaking-changes.md` | `FileAccess.store_*` renvoie un booléen |
@@ -481,10 +511,11 @@ absents. Aucun accès fichier dans les tests [U].*
 - **AC-08 (règle 8)** [U] — **GIVEN** chaque déclencheur (commande, annulation, abandon,
   « Fin du tour », FIN_DE_TOUR après COMMENCER_LE_TOUR, fin de partie au tour 30),
   **THEN** une écriture chacun, et un rechargement retombe sur la main du joueur.
-- **AC-09 (règle 9)** [I] — **GIVEN** une phase ennemie avec un passage en arrière-plan,
-  **WHEN** les commandes de l'IA s'exécutent, **THEN** 0 écriture de la partie et au moins
-  une du profil ; **GIVEN** un arrêt en pleine phase, **WHEN** on recharge, **THEN** la
-  sauvegarde qui suit « Fin du tour » est chargée, la phase ennemie se rejoue seule et
+- **AC-09 (règle 9)** [I] — **GIVEN** une phase ennemie de N commandes de l'IA, **WHEN**
+  elles s'exécutent, **THEN** la partie est écrite après chacune (écritures coalescées
+  comprises, la dernière écriture reflétant la dernière commande) ; **GIVEN** un arrêt
+  après la commande k, **WHEN** on recharge, **THEN** la sauvegarde de la commande k est
+  chargée, la phase ennemie reprend à la commande k + 1 et
   atteint le même état final qu'une partie sans interruption
   (`design/gdd/tours-conditions-victoire.md`, AC-04).
 - **AC-10 (règle 10)** [I] — **GIVEN** la lecture d'une ruine, **WHEN** l'application est
@@ -512,6 +543,13 @@ absents. Aucun accès fichier dans les tests [U].*
   « en attente ».
 - **AC-17 (règle 17)** [U] — **GIVEN** une version plus ancienne, **THEN** elle est
   migrée, validée et réécrite, et les anciens octets deviennent la copie de secours.
+- **AC-17bis (règle 17bis)** [U] — **GIVEN** une partie du schéma N − 1 et un build sans
+  migration avant le test fermé, **THEN** elle est mise de côté (fichier conservé), le
+  message est affiché et une nouvelle partie est proposée, profil intact ; **GIVEN** un
+  build du test fermé ou postérieur avec un schéma incrémenté sans migration, **THEN** la
+  CI échoue ; **GIVEN** une migration dont le résultat viole un invariant, **THEN** la
+  partie est mise de côté sans écrasement ; **GIVEN** un changement de valeur
+  d'équilibrage seul, **THEN** le schéma est inchangé et la partie reprend.
 - **AC-18 (règle 18)** [U] — **GIVEN** une partie dont l'époque est inférieure à celle du
   profil, **THEN** elle est mise de côté avec un avertissement ; une époque égale est
   acceptée. [D] — une restauration Android ne rend que le profil.
