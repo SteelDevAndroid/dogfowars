@@ -131,7 +131,11 @@ l'appareil, et toute donnée personnelle ou de télémétrie.
    de la chronique : le prochain fragment d'une faction est le plus petit identifiant
    de son pool qui n'est pas encore dans la chronique (formule 1). Une chronique est
    complète quand tout son pool est trouvé. Ces deux valeurs sont recalculées, jamais
-   enregistrées, ce qui supprime tout écart entre position et chronique.
+   enregistrées, ce qui supprime tout écart entre position et chronique. Pendant une
+   partie, la formule 1 est **complétée du journal de la partie** (`J_f`, fragments déjà
+   lus dans la partie en cours) pour ne jamais donner deux fois le même fragment quand le
+   profil est en LECTURE_SEULE ou que l'écriture n'a pas encore abouti
+   (`design/gdd/ruines-fragments.md`, règle 17).
 8. **Les ruines lisent le profil, pas la graine.** Le fragment tiré par une ruine vient
    du profil (formule 1), pas du hasard. Le journal de la partie enregistre l'identifiant
    stable de ce fragment. Deux ruines lues au même tour : la seconde voit le profil
@@ -211,18 +215,19 @@ sont des **contrats provisoires**.
 
 The next_fragment formula is defined as:
 
-`next_fragment(f) = min(P_f \ C_f)`, ou AUCUN si `P_f ⊆ C_f`
+`next_fragment(f) = min(P_f \ (C_f ∪ J_f))`, ou AUCUN si `P_f ⊆ C_f ∪ J_f`
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
 | P_f | ensemble d'entiers | 1 à ~12 identifiants | data file (pool de fragments, contenu) | Pool actuel de la faction f |
 | C_f | ensemble d'entiers | 0 à non borné | calculated (profil, tranche Chronique) | Identifiants trouvés, y compris retirés ou inconnus |
+| J_f | ensemble d'entiers | 0 à 3 | calculated (journal des lectures de la partie, GDD 1) | Fragments déjà lus dans la partie en cours (vide hors partie) |
 | résultat | entier ou AUCUN | un identifiant de P_f | calculated | Fragment que donnera la prochaine ruine de f |
 
 **Output Range:** toujours un identifiant du pool actuel ; AUCUN quand le pool est
 complet. Jamais enregistré (règle 7).
-**Example:** P = {1..12}, C = {1, 2, 3, 5} → 4.
+**Example:** P = {1..12}, C = {1, 2, 3, 5}, J = {} → 4 ; avec J = {4} → 6. MVP : P = {1..5} (5 fragments), complet à la partie 2.
 
 ### 2. Chronique complète
 
@@ -260,7 +265,7 @@ cette valeur à son seuil de déblocage.
 
 The best_score formula is defined as:
 
-`best'(f, d) = max(best(f, d), s)`, sans effet si `m ∈ R`
+`best'(f, d) = max(best(f, d), s)`, sans effet si `m ∈ R` ; `s` est le **score de profil** de `tours-conditions-victoire.md` (formule 1 complète, avec `w_f × F` ; `w_p` = 0 au MVP), distinct du score décisif qui désigne le vainqueur (décision du 2026-10-30)
 
 **Variables:**
 | Variable | Type | Range | Source | Description |

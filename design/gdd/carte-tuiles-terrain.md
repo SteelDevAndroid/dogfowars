@@ -138,12 +138,17 @@ test ; elles vivent dans des fichiers de données.*
 13. **Un drone réveillé remplace son marqueur.** Le point d'intérêt « drone endormi »
     disparaît quand le drone se réveille ; l'unité prend sa place.
 
+13bis. **Types des dormants tirés** (`design/gdd/reveil-drones.md`, règle 9). Pour chaque dormant dont le fichier donne une liste de types, le type est tiré pendant la mise en place par la fonction de hasard de l'état (formule 2 du GDD 1), dormant après dormant dans l'ordre, avec remise ; le tirage est reproduit par la symétrie de rotation, de sorte que les deux camps ont les mêmes types. Le coût de réveil d'un camp va ainsi de 13 (Ouvrier 5, deux Éclaireurs 4) à 21 (Ouvrier 5, deux Rempart 8).
+13ter. **Contrainte de placement des ruines** (`design/gdd/ruines-fragments.md`, règle 32) : au moins une des 3 ruines tirées n'est pas sur le plus court chemin entre un départ et le nœud neutre le plus proche, pour qu'au moins une ruine coûte un vrai détour.
+
 #### Le fichier de carte
 
 14. **Contenu d'une carte** (données, dans `assets/data/maps/`) : version du schéma,
     identifiant, taille, grille des terrains, un départ par faction, emplacements des
-    nœuds (départs compris), emplacements des drones endormis, zones de ruines (candidats
-    et nombre à tirer), et en option sa symétrie. Le générateur procédural (21) produira
+    nœuds (départs compris), emplacements des drones endormis (pour chacun, un type fixe
+    ou une **liste de types possibles** à tirer), zones de ruines (candidats et nombre à
+    tirer), la **faction de mémoire** des ruines (une seule valeur au MVP), les postes des
+    Gardiens, et en option sa symétrie. Le générateur procédural (21) produira
     des cartes dans le même format, validées par les mêmes contrôles. Une symétrie
     déclarée est **vérifiée** tuile par tuile, jamais supposée ; une version de schéma
     inconnue est refusée.
@@ -157,8 +162,12 @@ test ; elles vivent dans des fichiers de données.*
     montagnes reliées ne dépasse 4 tuiles. Départs à 8 ou 9
     tuiles l'un de l'autre ; autour de chaque départ, un rayon de 2 sans montagne ni eau.
     4 nœuds neutres (une paire proche de chaque départ, une paire disputée au centre) ;
-    6 drones endormis (un à 2 ou 3 tuiles de chaque départ, un près des nœuds disputés de
-    chaque côté, un derrière un terrain de chaque côté).
+    6 drones endormis : **un Ouvrier fixe à 3 tuiles de chaque départ** (garantie de
+    capture), un dormant près des nœuds disputés de chaque côté et un derrière un terrain de
+    chaque côté, dont le **type est tiré à la mise en place** parmi Éclaireur, Assaut et
+    Rempart (règle 13bis). Ceux du côté de l'IA sont **gardés** : au moins un Gardien à
+    portée d'attaque d'un tour de chacun (`design/gdd/ia-ennemie.md`, règle 11, calcul de
+    couverture identique au générateur, 21).
 16. **Lisible sur un téléphone.** Un amas de forêt ou de montagne tient dans un rectangle
     de 4 × 3 tuiles (dans un sens ou dans l'autre) ; une montagne ne cache jamais un point d'intérêt : chaque point
     d'intérêt (et chaque départ) est visible depuis **au moins la moitié** des tuiles
