@@ -2,8 +2,8 @@
 
 > **Status**: In Design
 > **Author**: user + Claude (game-designer, systems-designer)
-> **Last Updated**: 2026-10-29
-> **Last Verified**: 2026-10-29
+> **Last Updated**: 2026-10-30
+> **Last Verified**: 2026-10-30
 > **Implements Pillar**: Pilier 2 « Chaque faction a une mémoire » ; anti-pilier « pas de récit bloqué par la difficulté »
 > **Creative Director Review (CD-GDD-ALIGN)**: APPROVED 2026-10-29 (trois remarques de formulation du Player Fantasy appliquées)
 
@@ -119,8 +119,8 @@ l'appareil, et toute donnée personnelle ou de télémétrie.
    d'intégrité) appartient à la sauvegarde (16) et à un ADR ; l'atomicité du renommage
    sur Android est NOT SOURCEABLE.
 6. **Enregistrer un fragment est idempotent.** « Enregistrer un fragment (faction,
-   identifiant) » répond NOUVEAU, DÉJÀ_VU ou REFUSÉ (faction inconnue, copie de
-   simulation). Le même identifiant enregistré deux fois donne le même profil. Seul
+   identifiant) » répond NOUVEAU, DÉJÀ_VU ou REFUSÉ (faction inconnue). Le même
+   identifiant enregistré deux fois donne le même profil. Seul
    NOUVEAU fait avancer la révision et déclenche l'évaluation des déblocages par la
    Chronique (14). L'enregistrement modifie le profil en mémoire ; l'**écriture du
    fichier** est une étape distincte (règles 4 et 5) qui rend « réussie » ou « échouée ».
@@ -131,15 +131,16 @@ l'appareil, et toute donnée personnelle ou de télémétrie.
    de la chronique : le prochain fragment d'une faction est le plus petit identifiant
    de son pool qui n'est pas encore dans la chronique (formule 1). Une chronique est
    complète quand tout son pool est trouvé. Ces deux valeurs sont recalculées, jamais
-   enregistrées, ce qui supprime tout écart entre position et chronique. Pendant une
-   partie, la formule 1 est **complétée du journal de la partie** (`J_f`, fragments déjà
-   lus dans la partie en cours) pour ne jamais donner deux fois le même fragment quand le
-   profil est en LECTURE_SEULE ou que l'écriture n'a pas encore abouti
-   (`design/gdd/ruines-fragments.md`, règle 17).
-8. **Les ruines lisent le profil, pas la graine.** Le fragment tiré par une ruine vient
-   du profil (formule 1), pas du hasard. Le journal de la partie enregistre l'identifiant
-   stable de ce fragment. Deux ruines lues au même tour : la seconde voit le profil
-   déjà mis à jour par la première (écriture synchrone).
+   enregistrées, ce qui supprime tout écart entre position et chronique.
+8. **Les ruines ne lisent ni la graine, ni le profil en cours de partie.** Le fragment
+   donné par une ruine vient de la formule 1, pas du hasard. À la création d'une partie,
+   la chronique est copiée dans l'état de partie (instantané, règle 10 de
+   `design/gdd/modele-etat-partie.md`) ; pendant la partie, la formule 1 s'applique à cet
+   instantané plus le journal des lectures, jamais au profil. Le résultat est le même
+   qu'un calcul sur le profil, parce que la partie en cours est la seule à l'écrire (un
+   profil par installation, une partie à la fois). Le journal de la partie enregistre
+   l'identifiant stable du fragment. Deux ruines lues au même tour : la seconde voit le
+   journal déjà complété par la première.
 9. **Rien ne recule.** La chronique (union d'ensembles), les déblocages et les drapeaux
    d'accueil (une fois vrais, toujours vrais) et les meilleurs scores (maximum) ne
    reculent jamais, sauf réinitialisation. Seuls les réglages vont dans les deux sens.
@@ -173,9 +174,11 @@ l'appareil, et toute donnée personnelle ou de télémétrie.
 14. **Réglages disponibles au démarrage.** Les réglages se lisent avant le premier
     écran. Une tranche Réglages manquante ou illisible prend les valeurs par défaut sans
     bloquer le lancement.
-15. **Copies de simulation refusées.** Toute fonction d'écriture refuse un appel venu
-    d'une copie de simulation de l'état de partie (erreur en version de développement,
-    sans effet en version publiée).
+15. **Aucune écriture depuis une simulation.** En partie, une écriture du profil est un
+    effet rendu par une fonction de règle et appliqué seulement par la couche des
+    commandes (23) ; une simulation de l'IA ne passe pas par elle et jette ses effets
+    (règles 3 et 9 de `design/gdd/modele-etat-partie.md`). Le profil n'a donc pas à
+    reconnaître une copie de simulation.
 16. **Taille bornée.** Le profil ne contient que des identifiants et des entiers ; il
     reste sous le plafond de Tuning Knobs.
 
@@ -198,9 +201,9 @@ sont des **contrats provisoires**.
 
 | # | Système | Lit | Écrit (par les fonctions de 22) |
 |---|---|---|---|
-| 1 | Modèle d'état de partie | — | Rien ; son journal des lectures de ruine rend l'enregistrement rejouable (règle 10 du GDD 1) |
+| 1 | Modèle d'état de partie | Chronique, une fois à la création de la partie (instantané) | Rien ; son journal des lectures de ruine rend l'enregistrement rejouable (règle 10 du GDD 1) |
 | 3 | Tours et conditions de victoire | Meilleurs scores | « Soumettre un score » en fin de partie |
-| 13 | Ruines et fragments | Prochain fragment d'une faction, chronique complète ou non | « Enregistrer un fragment » (seul écrivain de la chronique) |
+| 13 | Ruines et fragments | Chronique, à la création de la partie (copiée dans l'instantané de l'état) | « Enregistrer un fragment » (seul écrivain de la chronique), effet rendu par la lecture d'une ruine et appliqué par les commandes (23) |
 | 14 | Chronique et progression méta | Chronique, déblocages | « Accorder un déblocage » ; la vue minimale de la chronique du MVP ne fait que lire |
 | 16 | Sauvegarde automatique | Version du schéma | Écritures de fichier, génération de secours ; supprime la partie sauvegardée lors d'une réinitialisation |
 | 18 | Menus et écrans hors partie | Tout (écran de chronique, scores, accueil) | Drapeaux d'accueil ; réinitialisation |
@@ -374,7 +377,7 @@ cas ; ce document fixe le contrat côté profil.*
 ### Cas à reprendre dans un autre GDD
 
 - **Si deux ruines de la même faction sont lues au même tour** : la seconde calcule la
-  formule 1 sur le profil déjà mis à jour par la première, et donne donc l'identifiant
+  formule 1 sur l'instantané et le journal déjà complété par la première, et donne donc l'identifiant
   suivant, jamais le même (règle 8). Propriétaire : 13.
 - **Si le pool d'une faction est complet et qu'une de ses ruines est lue** : la formule 1
   donne AUCUN, « enregistrer un fragment » n'est pas appelé, et le profil ne change pas.
@@ -394,7 +397,7 @@ complétude, et du moteur pour les types de base.
 
 | Système | Nature | Dure ou souple |
 |---|---|---|
-| 13 Ruines et fragments | Lit le prochain fragment ; seul à enregistrer un fragment | Dure : sans profil, une ruine ne sait pas quel fragment donner |
+| 13 Ruines et fragments | Copie la chronique à la création de la partie ; seul à enregistrer un fragment | Dure : sans profil, une nouvelle partie ne sait pas quels fragments sont déjà trouvés |
 | 14 Chronique et progression méta | Lit la chronique et les déblocages ; accorde les déblocages | Dure |
 | 16 Sauvegarde automatique | Écrit les fichiers du profil et la génération de secours ; réconcilie avec le journal de la partie | Dure |
 | 19 Réglages et accessibilité | Lit et écrit les réglages | Dure : les réglages n'ont pas d'autre stockage |
@@ -472,7 +475,7 @@ lisent (18, avec 14 pour la chronique) :
 | Document | Ce qui en est repris ou ce qui y est imposé |
 |---|---|
 | `design/gdd/game-concept.md` | Core Mechanics point 5 (règles du pool de fragments, fragments gardés même en cas de défaite, chronique sans texte ajouté) ; Long-Term Progression (déblocage à 4 sur 12) ; Retention Hooks (curiosité, investissement, meilleur score sur 30 tours) |
-| `design/gdd/modele-etat-partie.md` | Règle 10 (journal des lectures de ruine, mis à jour pour ce document) ; règle 9 (copie de simulation qui n'écrit jamais le profil) ; règle 13 (version de schéma) |
+| `design/gdd/modele-etat-partie.md` | Règle 10 (instantané de la chronique et journal des lectures de ruine) ; règles 3 et 9 (écritures du profil rendues comme effets, jamais appliquées par une simulation) ; règle 13 (version de schéma) |
 | `design/gdd/systems-index.md` | Place du système (22, Foundation, MVP) ; note TD-SYSTEM-BOUNDARY point 1 ; Creative Director Note sur la vue minimale de la chronique dans le MVP |
 | `design/accessibility-requirements.md` | Liste des réglages à stocker ; règles de texte et de zones tactiles des messages |
 | `design/ux/hud.md` | Les réglages lus par le HUD (§ 10.5) sont ceux stockés ici |
@@ -540,9 +543,9 @@ fichier absent. Aucun accès fichier dans les tests unitaires.*
   déblocages, les scores et les drapeaux ; l'époque la plus élevée l'emporte.
 - **AC-14 (règle 14)** [U] — **GIVEN** une tranche Réglages illisible, **WHEN** le jeu
   démarre, **THEN** les valeurs par défaut s'appliquent et le démarrage se termine.
-- **AC-15 (règle 15)** [U, version de développement et version publiée] — **GIVEN** une
-  copie de simulation, **WHEN** elle tente une écriture, **THEN** le stockage enregistre
-  0 appel (et une erreur est signalée en version de développement).
+- **AC-15 (règle 15)** [U] — **GIVEN** une simulation de l'IA qui lit une ruine, **WHEN**
+  elle se termine, **THEN** le stockage enregistre 0 appel et le profil en mémoire est
+  inchangé.
 - **AC-16 (règle 16)** [U] — **GIVEN** un profil au-dessus de PROFILE_SIZE_CAP, **WHEN**
   on tente de l'écrire, **THEN** l'écriture est refusée, une erreur est signalée et le
   fichier précédent est intact.
