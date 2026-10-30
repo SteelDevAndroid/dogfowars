@@ -260,7 +260,7 @@ question au joueur, on choisit celui qui pose une question.
    *Test : une ruine doit se repérer depuis l'autre bout de l'écran, même dans le brouillard.*
 3. **Une silhouette par type, un motif par faction.** Les silhouettes de drones sont fixes,
    compactes et facettées ; les factions se distinguent par la palette et un motif
-   récurrent (antenne, emblème). Les ruines humaines, plus anguleuses et brisées,
+   récurrent (antenne, emblème). Les ruines humaines, en courbes brisées,
    contrastent avec la géométrie propre des drones.
    *Test : un joueur daltonien reconnaît la faction par sa forme, pas seulement par sa couleur.*
 
