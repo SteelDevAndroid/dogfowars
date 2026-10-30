@@ -143,6 +143,17 @@ state_ownership:
     added: 2026-10-30
     revised: ""
 
+  - state: game_state_ai_agents
+    status: active
+    owner_system: ai-agents-slice
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    interface: "Tranche privée à la faction de l'IA : états de rôle, compteur « tours sans cible », poste, motif courant ; écrite par l'application d'ANNONCER_LES_INTENTIONS ; filtered_copy(IA) la garde, filtered_copy(JOUEUR) la retire ; pistes et siège restent dans la tranche Intentions, IA passive dans l'en-tête"
+    write_access: ai-system-only
+    referenced_by:
+      - docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-10-30
+    revised: ""
+
   - state: game_state_intentions
     status: active
     owner_system: intentions-slice
@@ -241,6 +252,19 @@ interfaces:
     added: 2026-10-30
     revised: 2026-10-30   # ancien motif : signal
 
+  - contract: ai_turn_handoff
+    status: active
+    pattern: direct_call
+    producer: turns-system
+    consumers:
+      - ai-runner
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    signal_signature: "AiRunner.start_turn(state, pipeline, pacing: PacingGate) ; rappel injecté on_turn_finished: Callable ; PacingGate.is_ready() -> bool (port Core, adaptateur de présentation, version factice pour les tests)"
+    referenced_by:
+      - docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-10-30
+    revised: ""
+
   - contract: command_submission
     status: active
     pattern: direct_call
@@ -329,6 +353,16 @@ performance_budgets:
     notes: "Proposé, à confirmer par l'utilisateur : couche des tuiles au plus 1 ms CPU par image, écriture de 256 tuiles au plus 0,5 ms, 1 appel de dessin, 0 allocation par image ; 60 i/s visées, 30 en plancher ; aucun appareil de référence nommé"
     referenced_by:
       - docs/architecture/adr-0001-rendu-des-tuiles.md
+    added: 2026-10-30
+    revised: ""
+
+  - system: ai-runner-frame
+    status: active
+    budget_ms: 2.0
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    notes: "Proposé : pire image du runner au plus 2 ms (une unité par image, copies filtrées comprises) ; comptages 2 500 copies et 20 000 évaluations par tour ; T_ai 2 000 ms est une cible mesurée, jamais une coupure ; aucun appareil de référence nommé"
+    referenced_by:
+      - docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
     revised: ""
 
@@ -556,5 +590,19 @@ forbidden_patterns:
     description: "apply n'émet jamais de commande ni n'appelle submit ; l'enchaînement des tours est porté par le système des tours."
     why: "Un submit imbriqué ferait appliquer deux fois au rejeu et casse une révision par commande."
     adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    added: 2026-10-30
+
+  - pattern: ai_state_outside_state
+    status: active
+    description: "Aucun état d'IA (rôle, piste, siège, poste) hors des tranches de l'état : ni dans un Node, ni dans un script d'unité, ni dans une variable globale ; l'état du runner et AiBudget sont transitoires et jamais sauvegardés."
+    why: "Copie, sauvegarde et rejeu emportent l'état ; le tour d'IA est rejoué depuis le début de la phase."
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-10-30
+
+  - pattern: runner_saves_or_references_presentation
+    status: active
+    description: "Le runner d'IA ne déclenche jamais de sauvegarde et ne référence aucune classe de Presentation ; il passe par PacingGate."
+    why: "Aucune sauvegarde pendant la phase ennemie (GDD 16, règle 9) ; sens de dépendance Core vers Presentation (ADR-0002)."
+    adr: docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
 
