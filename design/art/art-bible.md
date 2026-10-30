@@ -397,6 +397,11 @@ calculés à la main, à confirmer à l'analyseur.*
 Aucun élément diégétique. Deux couches :
 - **Écran** : bandeau, puces et panneaux forment le cadre de la carte. Ils ne passent
   jamais au-dessus des tuiles jouables et restent hors du voile violet du tour ennemi.
+  **Seule exception** (décision du 2026-10-30, `design/gdd/controles-tactiles-camera.md`,
+  règle 15) : la grappe des boutons de carte (+, −, recentrer), colonne de 48 dp dans un coin
+  bas du rectangle de carte, en aplats sombres à contour de 1 pt. Elle ne porte aucune
+  teinte de faction, et la marge de défilement de deux tuiles permet toujours de sortir une
+  tuile de dessous.
 - **Monde** : hachures, hexagones de sélection, crochets, jauges et débris sont posés sur les tuiles et
   suivent le zoom. Ils obéissent aux règles de la carte : aplats, aucune texture, contour
   sombre de 1 pt.

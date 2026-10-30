@@ -138,6 +138,21 @@ formulas:
     notes: "Out-of-bounds coordinates are refused, never clamped."
     added: 2026-10-29
     revised: ""
+  - name: screen_to_tile
+    status: active
+    source: design/gdd/controles-tactiles-camera.md
+    referenced_by:
+      - design/gdd/controles-tactiles-camera.md
+    variables:
+      - c
+      - rc
+      - s
+      - tile_pt
+    output_range: [-inf, inf]
+    expression: "(floori(w.x), floori(w.y)) with w = c + (s - rc) / tile_pt"
+    notes: "Presentation float math; yields integer (x, y) for commands. floori, never int(). Outside [0,W)x[0,H) is an empty background, never clamped (like tile_index)."
+    added: 2026-10-30
+    revised: ""
   - name: draw
     status: active
     source: design/gdd/modele-etat-partie.md
@@ -307,6 +322,7 @@ constants:
     source: design/gdd/modele-etat-partie.md
     referenced_by:
       - design/gdd/modele-etat-partie.md
+      - design/gdd/controles-tactiles-camera.md
     value: 16
     unit: tiles per side
     added: 2026-10-29
@@ -388,6 +404,7 @@ constants:
     source: design/gdd/commandes-evenements.md
     referenced_by:
       - design/gdd/commandes-evenements.md
+      - design/gdd/controles-tactiles-camera.md
     value: 33
     unit: ms (one frame at 30 fps)
     added: 2026-10-29
@@ -449,6 +466,38 @@ constants:
     value: 150
     unit: ms to load profile and match at launch (provisional)
     added: 2026-10-29
+    revised: ""
+  - name: ZOOM_MIN_TILE_PT
+    status: active
+    source: design/gdd/controles-tactiles-camera.md
+    referenced_by:
+      - design/gdd/controles-tactiles-camera.md
+      - design/ux/hud.md
+      - design/accessibility-requirements.md
+    value: 31
+    unit: pt (dp on Android) minimum tile size on screen
+    added: 2026-10-30
+    revised: ""
+  - name: ZOOM_MAX_FACTOR
+    status: active
+    source: design/gdd/controles-tactiles-camera.md
+    referenced_by:
+      - design/gdd/controles-tactiles-camera.md
+      - design/accessibility-requirements.md
+    value: 2
+    unit: times ZOOM_MIN_TILE_PT (maximum zoom)
+    added: 2026-10-30
+    revised: ""
+  - name: TAP_SLOP_FACTOR
+    status: active
+    source: design/gdd/controles-tactiles-camera.md
+    referenced_by:
+      - design/gdd/controles-tactiles-camera.md
+      - design/ux/hud.md
+      - design/accessibility-requirements.md
+    value: 0.5
+    unit: tiles (finger drift below which a touch is a tap)
+    added: 2026-10-30
     revised: ""
 
 # Example:
