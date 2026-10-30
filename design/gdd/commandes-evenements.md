@@ -78,6 +78,7 @@ les tours (3) ou l'IA (9), que le joueur ne voit jamais.
 |---|---|---|---|
 | DÉPLACER | J, IA | unité, tuile d'arrivée | PAS_VOTRE_TOUR, UNITÉ_INCONNUE, UNITÉ_ENDORMIE, DÉJÀ_DÉPLACÉE, HORS_DE_PORTÉE, CASE_BLOQUÉE, PARTIE_TERMINÉE |
 | ATTAQUER | J, IA | attaquant, cible | DÉJÀ_AGI, CIBLE_HORS_DE_PORTÉE, CIBLE_NON_VISIBLE, CIBLE_NON_HOSTILE, AUCUNE_INTENTION (émetteur IA hors d'une exécution d'intention : `ia-ennemie.md`, règle 7) |
+| MONTER_NŒUD | J, IA | nœud (la commande vaut pour le joueur comme pour l'IA) | six codes de refus du GDD des nœuds (NIVEAU_MAX, DÉJÀ_MONTÉ, NŒUD_ACQUIS_CE_TOUR, ÉNERGIE_INSUFFISANTE…, `noeuds.md`, Edge Cases) ; événement NŒUD_MONTÉ |
 | CAPTURER | J, IA | unité | PAS_SUR_UN_NŒUD, NŒUD_DÉJÀ_POSSÉDÉ, DÉJÀ_AGI, AUCUNE_INTENTION (émetteur IA hors d'une exécution d'intention) |
 | RÉVEILLER | J, IA | unité qui réveille, drone endormi | AUCUN_DRONE_ADJACENT, ÉNERGIE_INSUFFISANTE (besoin, disponible), MEUTE_COMPLÈTE |
 | RECHERCHER | J (l'IA reçoit ses protocoles par un calendrier en données : `arbre-protocoles.md`, règle 15) | protocole | Dans l'ordre : PARTIE_TERMINÉE / PAS_VOTRE_TOUR, PROTOCOLE_INCONNU, PROTOCOLE_ACQUIS, RECHERCHE_EN_COURS, PRÉREQUIS_MANQUANT, ÉNERGIE_INSUFFISANTE (besoin, disponible) |
@@ -92,6 +93,7 @@ commande, avec la séquence de la règle 10 de `design/gdd/modele-etat-partie.md
 
 #### Règles
 
+0. **Préfixe commun de refus** (ADR-0004), dans cet ordre fixe : réentrance (COMMANDES_VERROUILLÉES, erreur en développement), PARTIE_TERMINÉE, PAS_VOTRE_TOUR, verrou du joueur (COMMANDES_VERROUILLÉES), puis les vérifications propres à la commande. PARTIE_TERMINÉE et PAS_VOTRE_TOUR sont des lectures d'état, pas du `CommandGate` ; ABANDONNER est permis en phase ennemie. `command_id` d'un lot = la révision de l'état (un seul numéro).
 1. **Valider, puis appliquer.** Chaque commande passe par « valider (état, faction,
    commande) », qui rend un résultat, puis, seulement si elle est permise, par
    « appliquer ». Aucune autre fonction ne modifie l'état en partie
@@ -192,7 +194,7 @@ Paramètres : identifiants et tuiles seulement.
 | UNITÉ_DÉTRUITE | unité, tuile, par | 17, 20 |
 | NŒUD_CAPTURÉ | nœud, faction, ancien propriétaire | 17, 20 |
 | PROPRIÉTAIRE_DES_TUILES_CHANGÉ | tuiles, ancien, nouveau | 17 |
-| COULEUR_DES_TUILES_CHANGÉE | cause (CAPTURE, MONTÉE, RUINE, ÉLIMINATION, RÉVÉLATION), tuile source, groupes `(couleur_avant, couleur_après, mode, tuiles)` ; un seul par commande, jamais vide (`recoloration-monde.md`, règle 18) | 17 |
+| COULEUR_DES_TUILES_CHANGÉE | cause (CAPTURE, MONTÉE, RUINE, ÉLIMINATION, RÉVÉLATION), tuile source, groupes `(couleur_avant, couleur_après, mode, tuiles)`, source effective (F7) et drapeau VISIBLE par tuile changée ; un seul par commande, jamais vide (`recoloration-monde.md`, règle 18 ; ADR-0001) | 17 |
 | DRONE_RÉVEILLÉ | unité, par | 17, 20 |
 | ÉNERGIE_CHANGÉE | faction, avant, après | 17 |
 | RECHERCHE_COMMENCÉE, RECHERCHE_TERMINÉE | faction, protocole | 17, 20 |

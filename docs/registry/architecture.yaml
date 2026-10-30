@@ -158,10 +158,33 @@ state_ownership:
     status: active
     owner_system: factions-slice
     adr: docs/architecture/adr-0003-etat-de-partie.md
-    interface: "Factions : énergie, protocoles, recherche en cours, éliminée ; compteurs de score ; journal des commandes ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
+    interface: "Factions : énergie, protocoles, recherche en cours, éliminée ; compteurs de score ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
     write_access: owner-system-only
     referenced_by:
       - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: 2026-10-30   # le journal des commandes est passé à game_state_command_log (ADR-0004)
+
+  - state: game_state_command_log
+    status: active
+    owner_system: command-pipeline
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    interface: "Révision (= numéro de la dernière commande appliquée) ; incrémentée par le pipeline seulement, jamais reculée, conservée par restore_from ; lecture par StateView"
+    write_access: command-pipeline-only
+    referenced_by:
+      - docs/architecture/adr-0004-pipeline-de-commandes.md
+      - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: undo_slot
+    status: active
+    owner_system: command-pipeline
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    interface: "UndoSlot : instantané d'annulation (copie hors de l'état), révision de l'instantané, motif ; runtime, jamais sauvegardé ni copié ; remis à zéro par on_state_loaded()"
+    write_access: command-pipeline-only
+    referenced_by:
+      - docs/architecture/adr-0004-pipeline-de-commandes.md
     added: 2026-10-30
     revised: ""
 
@@ -217,6 +240,19 @@ interfaces:
       - docs/architecture/adr-0002-evenements-de-presentation.md
     added: 2026-10-30
     revised: 2026-10-30   # ancien motif : signal
+
+  - contract: command_submission
+    status: active
+    pattern: direct_call
+    producer: controls-ai-turns
+    consumers:
+      - command-pipeline
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    signal_signature: "CommandPipeline.submit(command) -> ValidationResult ; check(command) -> ValidationResult ; preview(command) -> PreviewResult ; apply_on(copy, command, collector) -> ValidationResult"
+    referenced_by:
+      - docs/architecture/adr-0004-pipeline-de-commandes.md
+    added: 2026-10-30
+    revised: ""
 
   - contract: event_batch_delivery
     status: active
@@ -293,6 +329,16 @@ performance_budgets:
     notes: "Proposé, à confirmer par l'utilisateur : couche des tuiles au plus 1 ms CPU par image, écriture de 256 tuiles au plus 0,5 ms, 1 appel de dessin, 0 allocation par image ; 60 i/s visées, 30 en plancher ; aucun appareil de référence nommé"
     referenced_by:
       - docs/architecture/adr-0001-rendu-des-tuiles.md
+    added: 2026-10-30
+    revised: ""
+
+  - system: command-validate-apply
+    status: active
+    budget_ms: 0.3
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    notes: "Provisoire (formule 3 du GDD 23) : validation plus application au plus 0,3 ms par commande sur l'appareil de référence (non nommé) ; si dépassé, l'IA évalue moins de candidates"
+    referenced_by:
+      - docs/architecture/adr-0004-pipeline-de-commandes.md
     added: 2026-10-30
     revised: ""
 
@@ -489,5 +535,26 @@ forbidden_patterns:
     description: "L'état ne contient ni Node, ni Object, ni Callable, ni RID, ni Resource créée à l'exécution, ni Dictionary non typé."
     why: "Règle 4 du GDD 1 ; var_to_bytes perd les objets ; copie coûteuse."
     adr: docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+
+  - pattern: logic_in_command
+    status: active
+    description: "Une commande est une donnée pure : aucune logique ni référence à un objet du moteur ; la logique est dans les handlers par système."
+    why: "Règle 17 du GDD 23 : sérialisable sans perte et rejouable."
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    added: 2026-10-30
+
+  - pattern: validate_writes_state
+    status: active
+    description: "validate ne lit que la vue de la faction et n'écrit jamais."
+    why: "La validation est complète et l'application ne peut pas échouer ; un refus ne révèle rien de caché."
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    added: 2026-10-30
+
+  - pattern: nested_submit_in_apply
+    status: active
+    description: "apply n'émet jamais de commande ni n'appelle submit ; l'enchaînement des tours est porté par le système des tours."
+    why: "Un submit imbriqué ferait appliquer deux fois au rejeu et casse une révision par commande."
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
     added: 2026-10-30
 

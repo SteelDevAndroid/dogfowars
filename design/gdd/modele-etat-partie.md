@@ -96,7 +96,7 @@ définit le sens de ses champs et les seules fonctions qui l'écrivent.
 | Rappels de présentation | Pour la dernière phase ennemie seulement : unités perdues (tuile, camp), tuiles perdues ; vidée à la fin du tour suivant du joueur ; **aucun effet de jeu** (ni le score, ni l'IA, ni la vue ne la lisent ; `hud-systeme.md`, règle 22) | 17 lit ; 6 et 11 écrivent |
 | Compteurs de score | Comptes bruts : ruines lues pendant la partie, nœuds tenus, unités détruites | Chaque compte a le système qui le fait avancer (13, 11, 8) ; 3 possède la formule du score |
 | Journal des lectures de ruine | Par lecture : id de ruine, faction, **identifiant stable du fragment**, statut (en attente, validée) | 13 (voir règle 10) |
-| Journal des commandes | Numéro de la dernière commande appliquée, révision de l'état | 23 |
+| Journal des commandes | Révision de l'état (= numéro de la dernière commande appliquée, un seul numéro) ; propriété du pipeline de commandes, incrémentée par lui à chaque commande appliquée ; conservée par `restore_from` | 23 |
 
 Ne sont **pas** dans l'état : le revenu d'énergie et le score (calculés par 10 et 3 à
 partir de l'état), les données du profil (chronique, position dans le pool de fragments,
@@ -114,7 +114,7 @@ réglages : système 22), l'animation, la sélection et tout ce qui est purement
    unités ; le réveil appelle « réveiller » des unités ; la capture, le combat et les
    ruines appellent l'écriture du territoire des nœuds ; tout coût d'énergie passe par
    « dépenser » de l'énergie).
-3. **Chemin d'écriture unique.** En partie, l'état n'est modifié que par une commande
+3. **Chemin d'écriture unique.** (Exception nommée, ADR-0004 : le passage d'une entrée du journal des lectures de ruine de « en attente » à « validée » après l'écriture du profil est écrit par la fonction du propriétaire 13, hors commande et sans révision ; l'égalité profonde du rejeu normalise ce statut.) En partie, l'état n'est modifié que par une commande
    validée (système 23), qu'elle vienne du joueur ou de l'IA. L'interface, l'audio et
    les menus ne font que lire.
 4. **Données pures.** L'état ne contient que des valeurs simples : entiers, booléens,
@@ -165,7 +165,7 @@ réglages : système 22), l'animation, la sélection et tout ce qui est purement
     L'IA ne voit pas ce que le joueur ne lui montre pas (décision du 2026-10-29 :
     pilier 4 « juste mais dure », pilier 5 « Le brouillard cache une question »).
     Seuls la sauvegarde (16) et les tests lisent l'état complet.
-12. **Taille bornée.** L'état ne grandit pas sans limite : pas d'historique, pas de
+12. **Taille bornée.** Les collections sont **compactées en fin de tour** par un tri stable (id croissant préservé, ids consommés jamais réutilisés ; ADR-0003). L'état ne grandit pas sans limite : pas d'historique, pas de
     journal d'événements. Les bornes sont des constantes de ce document (voir Tuning
     Knobs) : 16 × 16 tuiles, 60 unités, 10 nœuds, et un plafond d'intentions par tour.
     L'instantané qui permet d'annuler le dernier déplacement est une copie gardée
@@ -175,7 +175,7 @@ réglages : système 22), l'animation, la sélection et tout ce qui est purement
     schéma ; un état d'une version plus ancienne est migré au chargement, un état d'une
     version plus récente est refusé. Ce système possède le schéma et le contrat
     « vers données / depuis données » ; la sauvegarde (16) possède les fichiers, l'écriture
-    atomique et le moment des sauvegardes. **Égalité profonde** : deux états sont égaux
+    atomique et le moment des sauvegardes. **Égalité profonde** (ADR-0003 : elle ignore les lignes mortes et la disposition interne ; `to_bytes` est déterministe et enveloppé d'une taille et d'une empreinte d'intégrité) : deux états sont égaux
     quand toutes leurs tranches ont les mêmes champs avec les mêmes valeurs, les
     collections indexées par identifiant étant comparées par identifiant (sans tenir
     compte de l'ordre interne) et les grilles case par case ; les drapeaux d'une copie
@@ -259,7 +259,7 @@ sont refusées, jamais ramenées dans les bornes.
 
 The draw formula is defined as:
 
-`draw(n) = hash32(seed, counter) mod n`, puis `counter = counter + 1`
+`draw(n) = hash32(seed, counter) mod n`, puis `counter = counter + 1`, avec `hash32(seed, counter)` = SplitMix32 appliqué à `z = (seed + (counter + 1) × 0x9E3779B9) & 0xFFFFFFFF` (forme canonique, ADR-0003 : le point fixe `hash32(0, 0) = 0` d'une forme sans incrément n'existe plus et la graine 0 reste légale)
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
@@ -276,8 +276,7 @@ casserait la reproductibilité. n est plafonné à 65 536. Le comportement des e
 GDScript en cas de dépassement n'est pas couvert par la référence du moteur (NOT
 SOURCEABLE) : chaque étape du hachage est masquée, et le hachage est figé par des tests
 à valeurs de référence.
-**Example:** hash32(1234, 7) = 2 913 004 551 (*valeur fictive, à remplacer par la
-vraie sortie du hachage choisi*) ; n = 6 → 2 913 004 551 mod 6 = 3 ; le compteur passe
+**Example:** hash32(1234, 7) = 2 913 004 551 (*valeur fictive, à recalculer avec la forme canonique et figer dans un test ; les graines de référence sont 0, 1, 1234, 987654321 et 4294967295*) ; n = 6 → 2 913 004 551 mod 6 = 3 ; le compteur passe
 à 8.
 
 ### 3. Attribution d'identifiant

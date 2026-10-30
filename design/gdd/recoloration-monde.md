@@ -131,7 +131,7 @@ la recoloration ne change jamais mécaniquement. Les durées sont des valeurs de
     `(couleur_avant, couleur_après, mode, tuiles triées par tile_index)`, un groupe par couple de couleurs et par
     mode (ONDE si le propriétaire réel a changé dans la commande, RÉVÉLATION sinon), jamais par tuile. Quand une
     commande mêle les deux, la cause suit la priorité ÉLIMINATION > CAPTURE > MONTÉE > RUINE > RÉVÉLATION. Source
-    d'une RÉVÉLATION : le `tile_index` minimal des tuiles changées. Seules les tuiles dont l'octet a réellement changé y figurent : `C` reste égal à 1 dans B_max
+    d'une RÉVÉLATION : le `tile_index` minimal des tuiles changées. **La charge porte aussi la source effective (F7) et, par tuile changée, le drapeau VISIBLE pour la faction de référence au moment de la commande** : la présentation calcule anneaux, débuts et durée à partir de l'événement seul, sans relire l'état (ADR-0001 ; `hud-systeme.md`, règle 2). Seules les tuiles dont l'octet a réellement changé y figurent : `C` reste égal à 1 dans B_max
     (`noeuds.md`, formule 6).
 19. **Élimination.** Les tuiles de la faction éliminée passent à 0, y compris hors de vue : 15 demande à 5 d'effacer
     l'octet 1 correspondant chez tous les spectateurs.
