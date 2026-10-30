@@ -1193,7 +1193,7 @@ constants:
     source: design/gdd/arbre-protocoles.md
     referenced_by:
       - design/gdd/arbre-protocoles.md
-    value: "antennes:15, cellules_econes:20, marche_forcee:30, soins_campagne:15, plaques:25, pointes:35"
+    value: "veille_elargie:15, reveil_sobre:20, cadence_marche:30, repos_reglementaire:15, blindage_appoint:25, rempart_arme:35"
     unit: energy to research (proposed)
     added: 2026-10-30
     revised: ""
@@ -1212,7 +1212,7 @@ constants:
     referenced_by:
       - design/gdd/arbre-protocoles.md
       - design/gdd/ia-ennemie.md
-    value: "plaques:12, pointes:18"
+    value: "blindage_appoint:12, rempart_arme:18"
     unit: AI turn at which the protocol is granted (proposed)
     added: 2026-10-30
     revised: ""
