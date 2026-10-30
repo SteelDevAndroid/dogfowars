@@ -396,6 +396,128 @@ formulas:
     notes: "blocked() is the map GDD formula 3 (Bresenham, only mountains block). Node sources use max(2, territory radius). Union over a faction's sources."
     added: 2026-10-30
     revised: ""
+  - name: prix_reveil
+    status: active
+    source: design/gdd/reveil-drones.md
+    referenced_by:
+      - design/gdd/reveil-drones.md
+      - design/gdd/energie.md
+    variables:
+      - REVEIL_PRIX
+      - type
+    output_range: [4, 8]
+    expression: "REVEIL_PRIX[type]"
+    notes: "Fixed per type for the whole match; read through prix_reveil so that system 12 may add a modifier later. Debited by depenser (10)."
+    added: 2026-10-30
+    revised: ""
+  - name: couleur_tuile
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+      - design/gdd/brouillard-vision.md
+    variables:
+      - proprio_reel
+      - octet1_P
+      - visibilite
+    output_range: [0, 3]
+    expression: "VISIBLE: proprio_reel; EXPLOREE: octet1_P; INCONNUE: 0"
+    notes: "Byte of tile colour for the reference faction; written only by system 15."
+    added: 2026-10-30
+    revised: ""
+  - name: duree_onde_recoloration
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+      - design/gdd/noeuds.md
+    variables:
+      - T_ANNEAU
+      - T_FONDU
+      - K_MAX
+      - T_TOTAL_MAX
+      - k_max
+    output_range: [400, 1000]
+    expression: "min(K_MAX, k_max) * min(T_ANNEAU, (T_TOTAL_MAX - T_FONDU) div K_MAX) + T_FONDU"
+    notes: "Presentation only; radius 1/2/3 gives 600/800/1000 ms."
+    added: 2026-10-30
+    revised: ""
+  - name: saturation_fondu
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    variables:
+      - u
+      - D
+    output_range: [0, 1000]
+    expression: "(1000 * u) div D (grey to faction); mirrored for faction to grey; two halves for faction to faction"
+    notes: "Thousandths; hues never mix."
+    added: 2026-10-30
+    revised: ""
+  - name: fragment_suivant
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+      - design/gdd/profil-donnees-meta.md
+    variables:
+      - P_f
+      - C_f
+      - J_f
+    output_range: [1, 12]
+    expression: "min(P_f minus (C_f union J_f))"
+    notes: "Fixed chronicle order; no randomness."
+    added: 2026-10-30
+    revised: ""
+  - name: zone_ruine
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+      - design/gdd/recoloration-monde.md
+      - design/gdd/noeuds.md
+    variables:
+      - RAYON_ZONE_RUINE
+    output_range: [9, 25]
+    expression: "(2 * RAYON_ZONE_RUINE + 1)^2 clipped to the grid"
+    notes: "Only neutral non-node tiles are written."
+    added: 2026-10-30
+    revised: ""
+  - name: score_ruine
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+      - design/gdd/tours-conditions-victoire.md
+    variables:
+      - w_f
+      - w_t
+      - n_tuiles
+    output_range: [60, 85]
+    expression: "w_f + n_tuiles * w_t"
+    notes: "Not displayed before the read; excluded from the turn-30 comparison."
+    added: 2026-10-30
+    revised: ""
+  - name: score_ia_couple
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    variables:
+      - w_deg
+      - w_letal
+      - w_perte
+      - w_danger
+      - w_noeud
+      - w_raid
+      - w_laisse
+      - w_prog
+    output_range: [-1000, 1000]
+    expression: "w_deg*D_inf + w_letal*letal - w_perte*Riposte - w_danger*Exposition + w_noeud*Valeur_noeud + w_raid*raideur - w_laisse*max(0, dist_poste - LEASH) + w_prog*gain_distance"
+    notes: "Deterministic greedy score; weights are data in assets/data/ai.*"
+    added: 2026-10-30
+    revised: ""
   - name: draw
     status: active
     source: design/gdd/modele-etat-partie.md
@@ -768,6 +890,7 @@ constants:
     referenced_by:
       - design/gdd/energie.md
       - design/ux/hud.md
+      - design/gdd/reveil-drones.md
     value: 99
     unit: energy (stock cap per faction)
     added: 2026-10-30
@@ -873,6 +996,136 @@ constants:
       - design/gdd/carte-tuiles-terrain.md
     value: 1
     unit: tiles (extra vision radius for a source standing on a mountain)
+    added: 2026-10-30
+    revised: ""
+  - name: REVEIL_PRIX
+    status: active
+    source: design/gdd/reveil-drones.md
+    referenced_by:
+      - design/gdd/reveil-drones.md
+      - design/gdd/energie.md
+    value: "eclaireur:4, ouvrier:5, assaut:6, rempart:8"
+    unit: energy to wake a dormant drone, by its type (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: T_ANNEAU
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    value: 200
+    unit: ms per ring of the recolouring wave (150-200, proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: T_FONDU
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    value: 400
+    unit: ms fade of one tile (200-400, proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: K_MAX
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    value: 3
+    unit: rings after which wave starts are simultaneous (1-5)
+    added: 2026-10-30
+    revised: ""
+  - name: T_TOTAL_MAX
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    value: 1000
+    unit: ms cap of one wave
+    added: 2026-10-30
+    revised: ""
+  - name: T_REV
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    value: 150
+    unit: ms reveal fade without wave
+    added: 2026-10-30
+    revised: ""
+  - name: RAYON_ZONE_RUINE
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+      - design/gdd/recoloration-monde.md
+      - design/gdd/noeuds.md
+    value: 2
+    unit: tiles (Chebyshev radius of the ruin zone; zone = 25 tiles)
+    added: 2026-10-30
+    revised: ""
+  - name: Z_RUINE_MAX
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+      - design/gdd/recoloration-monde.md
+    value: 25
+    unit: tiles in a ruin zone
+    added: 2026-10-30
+    revised: ""
+  - name: LECTURES_PAR_PARTIE
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+    value: 3
+    unit: ruins drawn (and fragments readable) per match
+    added: 2026-10-30
+    revised: ""
+  - name: PISTES_MAX
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    value: 16
+    unit: last-seen entries kept by the AI
+    added: 2026-10-30
+    revised: ""
+  - name: PISTES_TTL
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    value: 4
+    unit: turns a last-seen entry lives
+    added: 2026-10-30
+    revised: ""
+  - name: LEASH
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    value: 4
+    unit: tiles a Chasseur may stray from its post
+    added: 2026-10-30
+    revised: ""
+  - name: RAID_RADIUS
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    value: 2
+    unit: tiles from an AI-side dormant that counts as a raid
+    added: 2026-10-30
+    revised: ""
+  - name: EVALS_MAX
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    value: 20000
+    unit: pure formula evaluations per AI turn
     added: 2026-10-30
     revised: ""
 

@@ -97,8 +97,9 @@ tour 1**. Les valeurs chiffrées sont des valeurs de départ [PROP].*
    hors de vue n'est pas mémorisé (aucune fuite : un nœud adverse hors de vue s'affiche sans niveau).
 5. **Rafraîchissement.** Après chaque commande appliquée, une fois les écritures de territoire faites et
    la vue recalculée (règle 9), l'octet 1 de chaque tuile VISIBLE est recopié depuis le propriétaire
-   réel. **Exception** : quand une tuile **perd** la faction qui regarde comme propriétaire, cette faction
-   l'apprend aussitôt (octet 1 mis à jour même hors de vue), car le pilier 4 et la puce « Nœud perdu » du
+   réel. **Exception** : quand une tuile **perd** ou **gagne** la faction qui regarde comme propriétaire (une zone de
+   ruine plus grande que le champ de vue, par exemple), cette faction l'apprend aussitôt (octet 1 mis à jour même
+   hors de vue), car le pilier 4 et la puce « Nœud perdu » du
    HUD l'exigent.
 6. **Les unités ne sont jamais mémorisées.** Une unité est visible si et seulement si sa tuile est
    VISIBLE pour la faction. Aucune table « unités vues » dans l'état ; une mémoire d'unités de l'IA, si
@@ -118,9 +119,10 @@ tour 1**. Les valeurs chiffrées sont des valeurs de départ [PROP].*
 9. **Recalcul.** `recalculer_vue(état, faction)` remet à zéro `vue_maintenant`, parcourt les sources par
    identifiant croissant (unités, puis nœuds), met `vue_maintenant` et `découverte` aux tuiles de leurs
    champs, puis rafraîchit l'octet 1. Il est appelé pour **les deux factions** après toute commande
-   appliquée de type DÉPLACER, ATTAQUER, CAPTURER, RÉVEILLER ou EXÉCUTER_UNE_INTENTION (déplacement,
-   destruction d'une unité qui voyait, capture ou perte de nœud, réveil). Aucun recalcul pour RECHERCHER,
-   MONTER_NŒUD, FINIR_LE_TOUR, COMMENCER_LE_TOUR (aucune source ne change).
+   appliquée de type DÉPLACER, ATTAQUER, CAPTURER, RÉVEILLER, MONTER_NŒUD ou EXÉCUTER_UNE_INTENTION
+   (déplacement, destruction d'une unité qui voyait, capture ou perte de nœud, réveil, **montée d'un nœud** dont la vue
+   passe de 2 à 3 au niveau 3). Aucun recalcul pour RECHERCHER, FINIR_LE_TOUR, COMMENCER_LE_TOUR (aucune source ne
+   change).
 10. **Champs de vue précalculés.** Le terrain étant fixe, `champ(V, r_eff)` est une fonction pure : une
     liste ordonnée d'indices de tuiles par couple (V, r_eff), construite à la mise en place (ou
     paresseusement), conservée **hors de l'état**, partagée en lecture seule par les copies, jamais
