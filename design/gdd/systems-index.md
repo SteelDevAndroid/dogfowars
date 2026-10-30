@@ -2,7 +2,7 @@
 
 > **Status**: Draft
 > **Created**: 2026-10-29
-> **Last Updated**: 2026-10-29
+> **Last Updated**: 2026-10-30
 > **Source Concept**: design/gdd/game-concept.md
 > **Gates**: TD-SYSTEM-BOUNDARY : CONCERNS (point 1 appliqué ; points 2 à 8 notés pour les GDD) · PR-SCOPE : OPTIMISTIC (ajustements appliqués) · CD-SYSTEMS : CONCERNS (point 1 appliqué, points 2 à 4 notés sous « Priority Tiers »)
 
@@ -39,7 +39,7 @@ système méta.
 
 **Socle.** La **carte en tuiles (2)** définit la grille, le terrain, les coûts de
 déplacement et la carte fixe du MVP. Les **tours et conditions de victoire (3)** fixent
-la suite des phases d'un tour (joueur, publication des intentions, exécution ennemie),
+la suite des phases d'un tour (joueur, exécution ennemie, publication des intentions),
 la limite de 30 tours, la domination et le score ; le score lit ses comptes dans l'état
 de partie. Les **commandes et événements (23)** sont la couche d'actions validées
 partagée par le joueur et l'IA (déplacer, attaquer, capturer, réveiller, rechercher) et
@@ -54,8 +54,9 @@ déterministe. L'**énergie (10)** et les **nœuds (11)** forment l'économie ; 
 le seul système qui écrit le territoire. Le **brouillard (5)** calcule la vision des
 unités et des nœuds. Le **réveil des drones (7)** est le geste qui fait grandir la meute à
 l'écran. Les **protocoles (12)** débloquent unités et capacités. La **recoloration (15)**
-traduit la possession en couleur, tuile par tuile. Les **ruines et fragments (13)**
-lisent le pool dans le profil, recolorent une zone et nourrissent le score ; dès le MVP,
+traduit la possession en couleur, tuile par tuile, sans rien stocker. Les **ruines et
+fragments (13)** copient la chronique du profil à la création de la partie, en tirent le
+fragment suivant, recolorent une zone et nourrissent le score ; dès le MVP,
 elles portent aussi une **vue minimale de la chronique**, en lecture seule (la liste des
 fragments déjà trouvés), pour que les tests mesurent l'envie de rejouer pour la
 chronique (CD-SYSTEMS, point 1). L'**IA à
@@ -82,7 +83,8 @@ d'une information.
   les ruines (13), le combat et la capture l'appellent. La recoloration (15) se contente
   de lire et d'afficher.
 - **Deux sauvegardes, une cohérence.** Le profil (22) est écrit dès qu'une ruine est lue,
-  la partie (1) en fin de tour. La sauvegarde (16) doit garantir qu'une reprise après un
+  la partie (1) après chaque commande. Aucune règle de partie ne lit le profil : la
+  chronique est copiée dans l'état à la création. La sauvegarde (16) doit garantir qu'une reprise après un
   arrêt de l'application ne montre pas une ruine non lue alors que son fragment est déjà
   compté.
 - **Les intentions sont dans l'état.** L'IA (9) écrit ses intentions dans l'état de
@@ -254,10 +256,10 @@ conception, selon `design/accessibility-requirements.md`.
 
 | Point | Note | GDD concerné |
 |---|---|---|
-| 1 | Profil séparé de l'état de partie ; écriture du profil à la lecture d'une ruine, de la partie en fin de tour ; cohérence des deux à définir (journal de la lecture dans l'état, ou sauvegarde commune) | 22, 16, 13, 14 |
+| 1 | Profil séparé de l'état de partie ; écriture du profil à la lecture d'une ruine, de la partie après chaque commande ; cohérence par le journal de la lecture dans l'état et un instantané de la chronique copié à la création (GDD 1, règle 10) | 22, 16, 13, 14 |
 | 2 | Les intentions annoncées vivent dans l'état de partie, pas dans l'IA | 1, 9 |
 | 3 | L'IA dépend aussi du réveil, de l'énergie et des protocoles | 9 |
-| 4 | API unique d'écriture du territoire dans les nœuds ; recoloration scindée en données par tuile et shader de présentation | 11, 15 |
+| 4 | API unique d'écriture du territoire dans les nœuds, qui enregistre aussi le dernier changement de propriétaire ; la recoloration déduit la couleur de ces champs et ne garde que le shader de présentation | 11, 15 |
 | 5 | Couche de commandes validées commune au joueur et à l'IA | 23, 4, 9 |
 | 6 | État en données pures, sans Node ni SceneTree, clonable à faible coût, pour l'IA sur plusieurs images ou dans un thread en moins de 2 s | 1, 9 |
 | 7 | L'état de partie reste un conteneur sans règles ; chaque système possède sa tranche et ses règles en fonctions pures | 1 et tous |
