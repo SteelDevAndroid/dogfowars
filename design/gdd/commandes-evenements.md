@@ -77,10 +77,10 @@ les tours (3) ou l'IA (9), que le joueur ne voit jamais.
 | Commande | Émetteur | Paramètres (identifiants et tuiles) | Principales raisons de refus |
 |---|---|---|---|
 | DÉPLACER | J, IA | unité, tuile d'arrivée | PAS_VOTRE_TOUR, UNITÉ_INCONNUE, UNITÉ_ENDORMIE, DÉJÀ_DÉPLACÉE, HORS_DE_PORTÉE, CASE_BLOQUÉE, PARTIE_TERMINÉE |
-| ATTAQUER | J, IA | attaquant, cible | DÉJÀ_AGI, CIBLE_HORS_DE_PORTÉE, CIBLE_NON_VISIBLE, CIBLE_NON_HOSTILE |
-| CAPTURER | J, IA | unité | PAS_SUR_UN_NŒUD, NŒUD_DÉJÀ_POSSÉDÉ, DÉJÀ_AGI |
+| ATTAQUER | J, IA | attaquant, cible | DÉJÀ_AGI, CIBLE_HORS_DE_PORTÉE, CIBLE_NON_VISIBLE, CIBLE_NON_HOSTILE, AUCUNE_INTENTION (émetteur IA hors d'une exécution d'intention : `ia-ennemie.md`, règle 7) |
+| CAPTURER | J, IA | unité | PAS_SUR_UN_NŒUD, NŒUD_DÉJÀ_POSSÉDÉ, DÉJÀ_AGI, AUCUNE_INTENTION (émetteur IA hors d'une exécution d'intention) |
 | RÉVEILLER | J, IA | unité qui réveille, drone endormi | AUCUN_DRONE_ADJACENT, ÉNERGIE_INSUFFISANTE (besoin, disponible), MEUTE_COMPLÈTE |
-| RECHERCHER | J, IA | protocole | PROTOCOLE_ACQUIS, RECHERCHE_EN_COURS, PRÉREQUIS_MANQUANT, ÉNERGIE_INSUFFISANTE |
+| RECHERCHER | J (l'IA reçoit ses protocoles par un calendrier en données : `arbre-protocoles.md`, règle 15) | protocole | Dans l'ordre : PARTIE_TERMINÉE / PAS_VOTRE_TOUR, PROTOCOLE_INCONNU, PROTOCOLE_ACQUIS, RECHERCHE_EN_COURS, PRÉREQUIS_MANQUANT, ÉNERGIE_INSUFFISANTE (besoin, disponible) |
 | FINIR_LE_TOUR | J | — | PAS_VOTRE_TOUR, COMMANDES_VERROUILLÉES |
 | ABANDONNER | J | — | PARTIE_TERMINÉE (après confirmation dans le menu pause, 18 ; `design/gdd/tours-conditions-victoire.md`) |
 | ANNULER_LE_DÉPLACEMENT | J | — | RIEN_À_ANNULER, DÉPLACEMENT_A_RÉVÉLÉ, AUTRE_ACTION_DEPUIS |
@@ -186,18 +186,21 @@ Paramètres : identifiants et tuiles seulement.
 
 | Événement | Paramètres | Écouté par |
 |---|---|---|
-| UNITÉ_DÉPLACÉE | unité, départ, arrivée | 17, 20 |
+| UNITÉ_DÉPLACÉE | unité, départ, arrivée, destination demandée (distincte de l'arrivée en cas d'arrêt par embuscade) | 17, 20 |
 | TUILES_RÉVÉLÉES | faction, tuiles | 17 |
 | ATTAQUE_RÉSOLUE, puis UNITÉ_TOUCHÉE (cible, puis riposte) | attaquant, cible ; unité, dégâts, PV restants | 17, 20 |
 | UNITÉ_DÉTRUITE | unité, tuile, par | 17, 20 |
 | NŒUD_CAPTURÉ | nœud, faction, ancien propriétaire | 17, 20 |
 | PROPRIÉTAIRE_DES_TUILES_CHANGÉ | tuiles, ancien, nouveau | 17 |
-| COULEUR_DES_TUILES_CHANGÉE | tuiles | 17 |
+| COULEUR_DES_TUILES_CHANGÉE | cause (CAPTURE, MONTÉE, RUINE, ÉLIMINATION, RÉVÉLATION), tuile source, groupes `(couleur_avant, couleur_après, mode, tuiles)` ; un seul par commande, jamais vide (`recoloration-monde.md`, règle 18) | 17 |
 | DRONE_RÉVEILLÉ | unité, par | 17, 20 |
 | ÉNERGIE_CHANGÉE | faction, avant, après | 17 |
 | RECHERCHE_COMMENCÉE, RECHERCHE_TERMINÉE | faction, protocole | 17, 20 |
-| RUINE_LUE | ruine, faction, identifiant du fragment | 17, 20 |
-| INTENTION_ANNONCÉE, INTENTION_EXÉCUTÉE, INTENTION_ANNULÉE | intention, raison | 17, 20 |
+| RUINE_LUE | ruine, faction, identifiant du fragment (0 si le pool est épuisé) | 17, 20 |
+| UNITÉ_SOIGNÉE | unité, PV avant, PV après | 17 |
+| NŒUD_MONTÉ | nœud, niveau avant, niveau après | 17, 20 |
+| SIÈGE_ANNONCÉ (valeur portée par INTENTION_ANNONCÉE) | nœud, compte 1 ou 2 sur 2 (`ia-ennemie.md`, règle 13) | 17 |
+| INTENTION_ANNONCÉE, INTENTION_EXÉCUTÉE, INTENTION_ANNULÉE | intention (auteur, cible, tuile de l'auteur, tuile de la cible, type, motif TRAQUE / REPRÉSAILLE / CAPTURE / DÉFENSE), raison d'annulation (AUTEUR_DÉTRUIT, CIBLE_DÉTRUITE, CIBLE_DÉPLACÉE, HORS_DE_PORTÉE, UNITÉ_ABSENTE, UNITÉ_DÉTRUITE, NŒUD_DÉJÀ_À_L'IA) | 17, 20 |
 | TOUR_COMMENCÉ, TOUR_TERMINÉ, PHASE_CHANGÉE | tour, faction, phase | 17, 20 ; 16 (TOUR_TERMINÉ) |
 | FACTION_ÉLIMINÉE, PARTIE_TERMINÉE | faction ; statut | 17, 20 ; 16, 18 |
 | DÉPLACEMENT_ANNULÉ | unité, départ, arrivée | 17, 4 |

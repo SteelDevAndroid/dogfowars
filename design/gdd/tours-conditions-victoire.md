@@ -103,9 +103,11 @@ monde », qui reprend le pilier 1 déjà porté par la recoloration.*
 9. **La partie s'arrête au premier de ces événements** :
    - **Domination** : toutes les factions adverses sont éliminées. Victoire.
    - **Défaite** : la faction du joueur est éliminée.
-   - **Fin du tour 30** : les scores des deux camps sont calculés avec la même formule
-     (formule 1) ; le **score le plus haut gagne**, une égalité est un match nul
-     (décision du 2026-10-29).
+   - **Fin du tour 30** : les scores des deux camps sont calculés avec la même formule,
+     le **score décisif** (formule 1 avec F = 0 : les points de ruine ne comptent pas,
+     l'IA ne lisant aucune ruine) ; le **score le plus haut gagne**, une égalité est un
+     match nul (décisions du 2026-10-29 et du 2026-10-30). Les tuiles recolorées par une
+     ruine comptent dans T : pour la victoire, une ruine vaut son territoire.
    - **Abandon** : le joueur abandonne depuis le menu pause, après confirmation (18).
 10. **Élimination** (décision du 2026-10-29). Une faction qui ne possède plus **aucun
     nœud** est éliminée ; ses unités restantes sont détruites dans la même commande. Sa
@@ -125,9 +127,14 @@ monde », qui reprend le pilier 1 déjà porté par la recoloration.*
     poids fort — toute ruine compte, même quand la chronique de sa faction est complète,
     pour que le pilier 5 tienne aussi dans la phase de maîtrise — plus un bonus de domination qui diminue avec les tours restants
     (formules 1 et 2). Une ruine lue rapporte au moins autant que **5 tours** de bonus de
-    domination (w_f ≥ 5 × w_d) : elle n'est jamais un détour perdu (pilier 5).
+    domination (w_f ≥ 5 × w_d) : elle n'est jamais un détour perdu pour le **meilleur
+    score** (pilier 5). **Amendement du 2026-10-30 :** le vainqueur se décide sur le
+    **score décisif** (F = 0 ; w_p = 0 au MVP) ; `w_f × F` n'entre que dans le **score de
+    profil** de la règle 14. Le HUD affiche en permanence le score décisif des deux camps
+    (17, E07), séparé des points de ruine.
 14. **Meilleur score** (décision du 2026-10-29). Une partie terminée par **domination ou
-    au tour 30** — gagnée, perdue au score ou nulle — soumet son score au profil (22),
+    au tour 30** — gagnée, perdue au score ou nulle — soumet son **score de profil** (formule 1
+    complète, avec `w_f × F`) au profil (22),
     par couple (faction, difficulté), avec l'identifiant de partie pour ne le compter
     qu'une fois. Une **défaite par élimination** ou un **abandon** ne soumet aucun score ;
     les fragments déjà lus restent dans le profil.
@@ -185,7 +192,7 @@ The final_score formula is defined as:
 | U | int | 0..60 | calculated (état) | Unités en vie |
 | F | int | 0..3 | calculated (compteurs de score de l'état) | **Ruines lues** pendant la partie, y compris celles d'une faction dont la chronique est déjà complète (qui ne donnent plus de fragment, seulement la recoloration) — décision du 2026-10-29 |
 | D | int | 0..232 | calculated (formule 2) | Bonus de domination |
-| w_t, w_n, w_l, w_p, w_u, w_f | int | ≥ 0 | data file | Valeurs de départ : 1, 8, 4, 10, 2, 60 |
+| w_t, w_n, w_l, w_p, w_u, w_f | int | ≥ 0 | data file | Valeurs de départ : 1, 8, 4, 0 (`w_p`, décision du 2026-10-30 : les protocoles n'entrent pas dans le score au MVP), 2, 60 ; **score décisif = formule 1 avec F = 0 (règle 9), score de profil = formule 1 complète (règle 14)** |
 | U_cap | int | 1..60 | data file | Valeur de départ : 20 |
 
 **Output Range:** entier ≥ 0 (tous les termes sont positifs). Maximum pratique
@@ -399,14 +406,16 @@ demande jamais de confirmation.
   faction et de la difficulté, et fragments trouvés pendant la partie.
 - **Abandon** : dans le menu pause, avec confirmation, en disant que les fragments sont
   gardés mais que le score ne sera pas enregistré.
-- **Valeur d'une ruine pendant la partie** (décision du 2026-10-29) : la puce « Ruine
-  repérée » et la fiche de la tuile affichent « +60 au score » (valeur lue dans les
-  données, w_f), pour que le choix « lire la ruine ou esquiver » se calcule pendant le
-  tour (pilier 3). Le score complet reste dans le menu pause et sur l'écran de fin.
+- **Valeur d'une ruine pendant la partie** (décision du 2026-10-30, remplace celle du
+  2026-10-29) : la puce « Ruine repérée » n'affiche **aucun chiffre** (libellé et glyphe) ;
+  le gain perçu est la zone recolorée (13, règle 31). Le score décisif des deux camps est
+  affiché en permanence (17, E07), séparé des points de ruine ; le score de profil
+  (avec `w_f × F`) apparaît au bilan de fin de partie, ligne « Fragments lus ». Le score
+  de l'ennemi est une information publique (il dit « combien », jamais « où »).
 
 > **📌 UX Flag — Tours et conditions de victoire** : l'écran de fin, la confirmation
-> d'abandon (menus, 18) et la valeur de la ruine dans la puce « Ruine repérée » (mise à
-> jour de `design/ux/hud.md`, § 4.2) sont à spécifier avant d'écrire les epics.
+> d'abandon (menus, 18) et la puce « Ruine repérée » sans chiffre et le score décisif permanent (mise à
+> jour de `design/ux/hud.md`, § 4.2 et § 6) sont à spécifier avant d'écrire les epics.
 
 ## Cross-References
 
@@ -519,6 +528,6 @@ d'intégration dans `tests/integration/turns/` ; **[P]** simulation à graines f
 |---|---|---|---|
 | Les poids du score tiennent-ils en simulation ? Une domination précoce sans ruine domine-t-elle ? (activer D_MAX si oui) | systems-designer | Simulation IA contre IA, après le prototype de l'IA | |
 | Niveaux des nœuds (1 à 3 supposés) | game-designer | GDD des nœuds (11) | |
-| Le score de l'IA au 30e tour : l'IA joue-t-elle pour le score, et lit-elle les ruines ? Avec 3 ruines par partie (180 points), le résultat du 30e tour peut se jouer sur les ruines seules (CD-GDD-ALIGN) | ai-programmer, game-designer | GDD de l'IA (9), **avant de figer les poids du score** | |
+| Le score de l'IA au 30e tour : l'IA joue-t-elle pour le score, et lit-elle les ruines ? | ai-programmer, game-designer | GDD de l'IA (9) | Fermée le 2026-10-30 : l'IA ne lit aucune ruine ; la victoire se décide hors points de ruine (règle 9) |
 | Difficultés (3, après le MVP) : changent-elles les poids du score, ou seulement l'IA ? (valeur par défaut : seulement l'IA) | game-designer | Avant le palier de lancement | |
 | Report des dates du concept (MVP 14 à 16 semaines) : sans effet ici, mais à faire dans `design/gdd/game-concept.md` | user | Re-review du concept | |

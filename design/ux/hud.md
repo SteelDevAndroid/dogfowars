@@ -47,7 +47,7 @@ que la carte ne peut pas la porter seule. »
 - Numéro du tour et nombre de tours restants (limite de 30)
 - Énergie stockée et revenu par tour
 - Fragments lus pendant la partie, sur le nombre de ruines de la carte
-- Progression de la chronique de la faction (n / 12), hors partie
+- Progression de la chronique de la faction (n / N, N = taille du pool), hors partie
 - Possession des tuiles (grise, recolorée par faction)
 - Brouillard de guerre
 - Ruines repérées sous le brouillard, et distance à la plus proche
@@ -74,7 +74,7 @@ que la carte ne peut pas la porter seule. »
 |---|---|---|---|---|---|
 | Tour / 30 | ✔ | | | | Fixe le rythme de la partie et l'urgence du score |
 | Énergie et revenu | ✔ | | | | Conditionne chaque action du tour |
-| Fragments de la partie (n / ruines) | ✔ | | | | Rappelle le moteur de découverte (pilier 5) |
+| Fragments de la partie (n / 3 ruines) | ✔ | | | | Rappelle le moteur de découverte (pilier 5) |
 | Possession des tuiles | | | | ✔ | Pilier 1 : la croissance se voit sur la carte, jamais dans un chiffre |
 | Brouillard, ruines, unités, nœuds | | | | ✔ | Portés par les tuiles et les silhouettes |
 | Ruine repérée + distance | | ✔ (puce) | | ✔ (lueur) | La lueur suffit à proximité ; la puce donne la distance |
@@ -87,7 +87,7 @@ que la carte ne peut pas la porter seule. »
 | Dégâts | | ✔ (chiffres sur la tuile) | | | Brefs, au moment du coup |
 | Pertes (unité, nœud, tuile) | | ✔ (puce + journal) | | ✔ (débris, désaturation) | Pilier 1 : chaque perte se voit sur la carte |
 | Fragment trouvé | | ✔ (panneau) | | | Au moment de la lecture d'une ruine |
-| Chronique n / 12 | | ✔ (dans le panneau de fragment) | ✔ (écran chronique) | | Hors partie, sauf au moment d'un nouveau fragment |
+| Chronique n / N | | ✔ (dans le panneau de fragment) | ✔ (écran chronique) | | Hors partie, sauf au moment d'un nouveau fragment |
 | Protocoles | | | ✔ | | Écran dédié, hors de ce document |
 | Score en cours | | | ✔ (pause) | | Montré en fin de partie ; ne doit pas distraire pendant le tour |
 | Tour ennemi | | ✔ (étiquette + teinte violette) | | | Indique que les commandes sont verrouillées |
@@ -134,7 +134,7 @@ Paysage (référence 844 × 390 pt) :
 ```
 
 Le rail gauche passe de 168 à 140 pt et le panneau de 238 à 224 pt par rapport aux
-premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
+premiers mockups ; la carte gagne la largeur libérée (tuiles de 36,33 pt en paysage, 44,75 pt en portrait à 8 colonnes).
 
 ### 3.2 Zone Specification Table
 
@@ -209,7 +209,7 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 
 **Fragments de la partie**
 
-- Visual description : pastille sombre, icône ruine ocre, « n / ruines ». Au tour où un fragment est lu, la pastille passe au fond ocre foncé avec un liseré ocre.
+- Visual description : pastille sombre, icône ruine ocre, « n / 3 ruines » (compte les ruines lues, pas les fragments). Au tour où un fragment est lu, la pastille passe au fond ocre foncé avec un liseré ocre.
 - Data displayed : fragments lus pendant la partie, sur le nombre de ruines de la carte.
 - Update behavior : le chiffre s'incrémente quand le panneau de fragment s'ouvre.
 - Urgency states : aucun.
@@ -337,7 +337,7 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 
 **Panneau de fragment**
 
-- Visual description : feuille couleur papier (#EADFC8) avec une lueur ocre, seul élément clair du HUD ; en-tête « FRAGMENT RETROUVÉ » et titre ; citation en Spectral romain sur fond papier plus clair, avec sa source en mono ; barre de chronique en 12 segments (segments lus en brun, nouveau segment en ocre lumineux, segments à venir en beige) ; ligne « Zone recolorée · +n tuiles » (dans le rail en paysage) ; bouton « Continuer » sombre.
+- Visual description : feuille couleur papier (#EADFC8) avec une lueur ocre, seul élément clair du HUD ; en-tête « FRAGMENT RETROUVÉ » et titre ; citation en Spectral romain sur fond papier plus clair, avec sa source en mono ; barre de chronique à N segments (N = taille du pool, 5 au MVP) (segments lus en brun, nouveau segment en ocre lumineux, segments à venir en beige) ; ligne « Zone recolorée · +n tuiles » (dans le rail en paysage) ; bouton « Continuer » sombre.
 - Data displayed : titre du fragment, texte, source, progression de la chronique, nombre de tuiles recolorées.
 - Update behavior : glisse depuis le bas (portrait) ou la droite (paysage) en 300 ms, après la recoloration de la zone, pour que le joueur voie d'abord l'effet sur la carte.
 - Urgency states : aucun.
@@ -395,7 +395,7 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 | Puce de ruine | CAN HIDE | La lueur sur la carte suffit à proximité | Lueur sépia |
 | Fragments de la partie | CAN HIDE | Information de suivi, pas de décision | Panneau de fragment |
 | Portée de déplacement | CAN HIDE | Option pour joueurs expérimentés | — |
-| Score en cours | ALWAYS HIDE | Ne doit pas détourner de l'exploration | Menu pause, écran de fin |
+| Score décisif des deux camps (« Victoire : a contre b ») | MUST KEEP (permanent, GDD 17 E07) | Évite « je me crois en tête et je perds » ; hors points de ruine | Barre / rail |
 
 ---
 
@@ -410,7 +410,7 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 | Recouvrement de la carte par un panneau | 0% | Aucun panneau ne passe au-dessus des tuiles jouables | 0% sur les mockups | OK |
 | Contraste minimal du texte HUD | 4,5:1 (WCAG AA) | Mesuré sur chaque fond réel | Non mesuré | À vérifier |
 | Taille minimale des zones tactiles | 48 × 48 dp sur Android, 44 × 44 pt sur iOS (`design/accessibility-requirements.md`) | Zone qui réagit à l'appui, mesurée sur appareil à la plus petite résolution visée ; elle peut déborder du dessin de l'élément sans changer la mise en page | Boutons du panneau et « Fin du tour » : 48 pt et plus dessinés. Bouton pause et boutons d'action en paysage : 44 pt dessinés, zone à étendre. Puces d'alerte : ≈ 30 pt dessinés, zone à étendre à 48 dp | À implémenter ; budget d'écran inchangé |
-| Taille minimale d'une tuile | 31 pt | Mesurée au zoom minimal | ≈ 34 pt en paysage (carte de 436 pt sur 12 colonnes), 42 pt en portrait | À valider au doigt sur appareil |
+| Taille minimale d'une tuile | 31 pt | Mesurée au zoom minimal | 36,33 pt en paysage (carte de 436 pt sur 12 colonnes), 44,75 pt en portrait (358 pt sur 8 colonnes) ; 12 colonnes refusées en portrait (29,83 pt) | À valider au doigt sur appareil |
 | Taille minimale du texte | 12 pt | Mesurée à l'échelle de texte 100% | 12 pt : les stats passent en une ligne de 12 pt, les libellés de 10 pt disparaissent | OK après réduction |
 
 ---
@@ -423,12 +423,12 @@ premiers mockups ; la carte gagne la largeur libérée (tuiles d'environ 34 pt).
 | Ruine repérée | Brouillard, ruines | Alert row | Tant qu'une ruine est repérée et non lue | Fondu 200 ms | 1 puce | Basse | Une seule puce, la plus proche | Non |
 | Fragment trouvé | Ruines et fragments | Context panel | Jusqu'à « Continuer » | Glissement 300 ms | 1 | Haute | Si deux ruines sont lues au même tour, les panneaux s'enchaînent | Oui (« Continuer ») |
 | Attaque esquivée / annulée | IA à intentions | Alert row + journal | Durée du tour ennemi | Fondu 200 ms | 1 puce | Moyenne | Agrège le nombre d'attaques annulées | Non |
-| Drone réveillé | Unités | Carte (sur la tuile) | 800 | Pulsation puis retour au repos | Illimité | Moyenne | Pas de toast : l'effet reste sur la carte (pilier 1) | Non |
+| Drone réveillé | Unités | Carte (sur la tuile) | 600 | Séquence de réveil en une passe, sans toast | Illimité | Moyenne | Pas de toast : l'effet reste sur la carte (pilier 1) | Non |
 | Dégâts (infligés ou reçus) | Unités et combat | Carte (au-dessus de la tuile) | 800 | Montée de 12 pt + fondu | Illimité | Moyenne | L'attaque puis la riposte, l'une après l'autre | Non |
-| Unité du joueur détruite | Unités et combat | Carte (débris) + journal + puce de perte | Débris : jusqu'à la fin du tour suivant du joueur ; puce : tour du joueur | Éclatement 400 ms, puis débris fixe | 1 puce (compteur agrégé) | Haute | Jamais en file ; fusion des pertes du même type | Non |
+| Unité du joueur détruite | Unités et combat | Carte (débris) + journal + puce de perte | Débris : jusqu'à la fin du tour suivant du joueur ; puce : tour du joueur | Gris puis affaissement 400 ms, puis débris fixe | 1 puce (compteur agrégé) | Haute | Jamais en file ; fusion des pertes du même type | Non |
 | Nœud perdu | Nœuds | Carte (désaturation de la zone) + journal + puce de perte | Puce : tour du joueur | Désaturation 400 ms, puis couleur du nouveau propriétaire | 1 puce (compteur agrégé) | Haute | Jamais en file | Non |
 | Tuile perdue (hors nœud) | Nœuds, carte | Carte uniquement | Permanent | Désaturation 400 ms | Illimité | Moyenne | Pas de puce : la carte suffit | Non |
-| Unité ennemie détruite | Unités et combat | Carte (débris) | Jusqu'à la fin du tour | Éclatement 400 ms | Illimité | Moyenne | Pas de puce | Non |
+| Unité ennemie détruite | Unités et combat | Carte (débris) | Jusqu'à la fin du tour | Gris puis affaissement 400 ms | Illimité | Moyenne | Pas de puce | Non |
 | Derniers tours | Gestion des tours | Compteur de tour + puce | Permanent | Changement de graisse et contour, sans clignotement | 1 | Moyenne | — | Non |
 
 **Notification queue rules** :
@@ -507,11 +507,13 @@ couper la citation. La ligne de stats du panneau d'unité passe sur deux lignes 
 |---|---|---|---|
 | Recoloration des tuiles en fondu | Mild | Optional | Changement instantané |
 | Glissement des panneaux | Mild | Yes | Apparition instantanée |
-| Pulsation du drone réveillé | Mild | Yes | Contour fixe pendant 1 tour |
+| Séquence de réveil (600 ms) | Mild | Yes | État éveillé direct, son conservé |
+| Pulsation de l'œil au repos | Mild | Yes | Œil fixe |
 | Lueur des ruines et du nouveau segment de chronique | Mild | Yes (si animée) | Lueur fixe |
 | Animations du tour ennemi | Moderate | Yes | Déplacements instantanés, journal conservé |
 | Chiffres de dégâts qui montent | Mild | Yes | Chiffre fixe pendant 800 ms |
-| Éclatement d'une unité détruite | Moderate | Yes | Passage direct au glyphe de débris |
+| Affaissement d'une unité détruite | Moderate | Yes | Passage direct au glyphe de débris |
+| Recoloration en fondu (onde) | Moderate | Yes (pas « Optional ») | État final immédiat |
 | Désaturation d'une tuile perdue | Mild | Optional | Changement instantané |
 | Crochets animés de la cible choisie | Mild | Yes | Crochets épais fixes |
 
@@ -544,7 +546,7 @@ dialogues »). Si des sons portent une information (menace, réveil), chacun doi
 | Durée d'une action au tour ennemi (vitesse normale) | 600 ms | 200–1500 ms | Plus lisible, plus long | Plus rapide, moins lisible | Oui (vitesse du tour ennemi) | Budget : tour IA < 2 s de calcul (TD-FEASIBILITY) |
 | Seuil « derniers tours » | 5 tours restants | 3–10 | Alerte plus tôt | Alerte plus tard | Non | |
 | Durée des chiffres de dégâts | 800 ms | 400–1200 ms | Plus lisible, attaque plus longue | Plus vif | Indirect (réduction des animations) | Attaque + riposte ≈ 1,6 s au total |
-| Durée de l'éclatement et de la désaturation | 400 ms | 0–800 ms | Perte plus marquée | Perte plus discrète | Indirect | Pilier 1 : la perte doit rester visible |
+| Durée de l'affaissement et de la désaturation | 400 ms | 0–800 ms | Perte plus marquée | Perte plus discrète | Indirect | Pilier 1 : la perte doit rester visible |
 | Durée d'affichage des débris | Jusqu'à la fin du tour suivant du joueur | 1–2 tours | Le joueur retrouve mieux ses pertes | Carte plus nette | Non | |
 | Colonnes de carte visibles (zoom par défaut) | 8 portrait / 12 paysage | 6–10 / 10–14 | Plus de carte, tuiles plus petites | Tuiles plus grandes | Oui : pincement, et toujours un moyen sans geste à deux doigts (boutons +/− ou double appui, choix ouvert dans `design/accessibility-requirements.md`) | Tuile ≥ 31 pt |
 
@@ -637,3 +639,8 @@ découle encore d'une formule.
 | `design/accessibility-requirements.md` n'existe pas : le palier Standard est une proposition. | user | `/ux-design accessibility` | **Résolu le 2026-10-29** : palier Standard + 3 éléments Comprehensive engagé |
 | Cibles de 44 pt contre les 48 dp recommandés sur Android. | user + ux-designer | Avant `/ux-review` | **Résolu le 2026-10-29** : zones tactiles étendues (48 dp Android, 44 pt iOS) au-delà du dessin quand il le faut ; mise en page et budget inchangés (section 7) |
 | Mode contraste élevé : l'engager ou le retirer ? | user | Avant `/art-bible` | **Résolu le 2026-10-29** : retiré des réglages pour l'instant ; noté dans les limitations de `design/accessibility-requirements.md` |
+
+
+---
+
+> **Corrections du 2026-10-30 (GDD 17, `design/gdd/hud-systeme.md`)** : appliquées ici : tuile 36,33 pt, barre de chronique à N segments, pastille « n / 3 ruines », score décisif permanent, réveil 600 ms sans toast, affaissement à la place de l'éclatement, recoloration non optionnelle en animations réduites. **Restent à faire** : grappe de boutons (+, −, Recentrer) aux §3, §4 et §7 ; « Annuler le déplacement » distinct de l'annulation de l'aperçu ; états de la carte (INCONNUE, EXPLORÉE, VISIBLE), nœud adverse et dormant mémorisés, intention hors de vue, croix d'intention annulée ; puce de ruine sans chiffre ; menace visible dès le début du tour du joueur ; « Capturer » actif au moment de l'action ; budget de 9 éléments (§7) ; zone d'alerte à hauteur réservée, à remesurer avant `/ux-review` ; durée d'une action ennemie (600 ms contre environ 1,45 s).

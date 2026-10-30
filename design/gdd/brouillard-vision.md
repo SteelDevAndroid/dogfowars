@@ -213,6 +213,7 @@ tour 1**. Les valeurs chiffrées sont des valeurs de départ [PROP].*
     développement) ; `découverte` et l'octet 1 sont conservés ; le cache de champs de vue (règle 10) est
     reconstruit depuis le terrain. Même sauvegarde, même vue.
 
+24bis. **Exception : le score décisif (17, E07).** Le score exact des deux camps est le seul agrégat public calculé sur des données hors vue : il dit « combien », jamais « où ». Aucune décomposition ni aucun delta n'est affiché, il se met à jour à l'idle de début de tour sans animation de variation (`design/gdd/hud-systeme.md`, règles 4 et 23). La règle 4 du HUD (« vue du joueur seulement ») s'entend sauf cet agrégat.
 25. **Contrainte dure pour l'IA (9).** « L'IA ne triche pas » n'est vrai que si elle **planifie sur un état
     filtré à sa vue** : un état complet dont on saute seulement le recalcul de la vue connaîtrait encore la
     position des unités cachées du joueur. Toute copie de simulation de l'IA ne contient donc que ce que sa vue
