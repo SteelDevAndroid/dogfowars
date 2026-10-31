@@ -905,27 +905,27 @@ constants:
     unit: pt (dp on Android) minimum tile size on screen
     added: 2026-10-30
     revised: ""
-  - name: ZOOM_MAX_FACTOR
+  - name: ZOOM_MAX_MILLI
     status: active
     source: design/gdd/controles-tactiles-camera.md
     referenced_by:
       - design/gdd/controles-tactiles-camera.md
       - design/accessibility-requirements.md
-    value: 2
-    unit: times ZOOM_MIN_TILE_PT (maximum zoom)
+    value: 2000
+    unit: thousandths of ZOOM_MIN_TILE_PT (maximum zoom; 2000 = 2x) — renamed from ZOOM_MAX_FACTOR by ADR-0009 (integers only)
     added: 2026-10-30
-    revised: ""
-  - name: TAP_SLOP_FACTOR
+    revised: 2026-10-31
+  - name: TAP_SLOP_MILLI
     status: active
     source: design/gdd/controles-tactiles-camera.md
     referenced_by:
       - design/gdd/controles-tactiles-camera.md
       - design/ux/hud.md
       - design/accessibility-requirements.md
-    value: 0.5
-    unit: tiles (finger drift below which a touch is a tap)
+    value: 500
+    unit: thousandths of a tile (finger drift below which a touch is a tap) — renamed from TAP_SLOP_FACTOR by ADR-0009 (integers only)
     added: 2026-10-30
-    revised: ""
+    revised: 2026-10-31
   - name: REST_HEAL
     status: active
     source: design/gdd/unites-drones.md

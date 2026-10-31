@@ -102,7 +102,7 @@ de GDD : leurs lignes sont des contrats provisoires.*
    pincement s'arrête et le doigt restant ne reprend pas le défilement avant d'avoir été
    relevé (aucun saut). Rien n'exige jamais deux doigts.
 5. **Boutons de zoom +/−** (zone tactile de 48 dp / 44 pt, dans la grappe de la règle 15) :
-   zoom ancré au centre du rectangle de carte, multiplié ou divisé par `ZOOM_STEP_FACTOR`.
+   zoom ancré au centre du rectangle de carte, multiplié ou divisé par `ZOOM_STEP_MILLI`.
    Grisés — jamais cachés — aux bornes.
 6. **Ni double appui, ni appui long, ni glisser-déposer.** Deux appuis rapprochés sont
    deux appuis indépendants. Cela tranche la question ouverte de
@@ -169,7 +169,7 @@ de GDD : leurs lignes sont des contrats provisoires.*
     minimal pour une grappe de 48 dp de large — permet toujours de sortir une tuile de
     dessous la grappe, même quand la carte tient entière.
 16. **Zoom.** Zoom minimal : tuile de `ZOOM_MIN_TILE_PT` = 31 pt au moins. Zoom maximal :
-    `ZOOM_MAX_FACTOR` = 2 fois la taille minimale (62 pt). Zoom par défaut : 8 colonnes
+    `ZOOM_MAX_MILLI` = 2 fois la taille minimale (62 pt). Zoom par défaut : 8 colonnes
     visibles en portrait, 12 en paysage (`hud.md`, Tuning Knobs). La carte entière **n'est
     jamais visible** en portrait : 12 colonnes de 31 pt font 372 pt pour 358 pt utiles, et
     16 colonnes en font 496 ; le défilement est obligatoire.
@@ -257,7 +257,7 @@ paysage.*
 The tile size formula is defined as:
 
 `tile_pt = ZOOM_MIN_TILE_PT * z` ; `tile_px = tile_pt * px_per_pt` ;
-`tile_default = clamp(rw / cols_default, ZOOM_MIN_TILE_PT, ZOOM_MAX_FACTOR * ZOOM_MIN_TILE_PT)`
+`tile_default = clamp(rw / cols_default, ZOOM_MIN_TILE_PT, ZOOM_MAX_MILLI * ZOOM_MIN_TILE_PT)`
 
 **Variables:**
 
@@ -265,7 +265,7 @@ The tile size formula is defined as:
 |---|---|---|---|---|
 | z | float | 1..2 | calculated | Facteur de zoom |
 | ZOOM_MIN_TILE_PT | float | 31 | constant | Tuile minimale, en pt (`hud.md`) |
-| ZOOM_MAX_FACTOR | float | 1,5..3 | data file | Facteur maximal (2) |
+| ZOOM_MAX_MILLI | int | 1500..3000 | data file (2000) | Facteur maximal en millièmes (2000 = 2×) ; la formule lit `ZOOM_MAX_MILLI / 1000` |
 | rw | float | 200..500 | calculated (HUD) | Largeur du rectangle de carte, en pt |
 | cols_default | int | 6..10 portrait, 10..14 paysage | data file (`hud.md`) | Colonnes visibles par défaut (8 / 12) |
 | px_per_pt | float | 1..4 | calculated | Densité (formule 4) |
@@ -278,15 +278,15 @@ The tile size formula is defined as:
 The zoom step formula is defined as:
 
 `z' = min(z * S, Z_MAX)` (zoom +) ; `z' = max(z / S, 1)` (zoom −) ; bouton grisé si
-`|z' - z| < ZOOM_EPS`. Pincement : `z' = clamp(z0 * d / d0, 1, Z_MAX)`
+`|z' - z| < ZOOM_EPS_MICRO`. Pincement : `z' = clamp(z0 * d / d0, 1, Z_MAX)`
 
 **Variables:**
 
 | Variable | Type | Range | Source | Description |
 |---|---|---|---|---|
-| S | float | 1,15..1,5 | data file (`ZOOM_STEP_FACTOR` = 2^(1/3) ≈ 1,26) | Facteur par appui |
-| Z_MAX | float | 1,5..3 | data file | = `ZOOM_MAX_FACTOR` |
-| ZOOM_EPS | float | 0,0001..0,01 | data file (0,001) | Tolérance de borne, sans unité |
+| S | float | 1,15..1,5 | calculé : `ZOOM_STEP_MILLI / 1000` (`ZOOM_STEP_MILLI` = 1260, soit 2^(1/3) arrondi) | Facteur par appui |
+| Z_MAX | float | 1,5..3 | calculé : `ZOOM_MAX_MILLI / 1000` | Facteur maximal |
+| ZOOM_EPS_MICRO | int | 100..10000 | data file (1000) | Tolérance de borne en millionièmes (`ZOOM_EPS = ZOOM_EPS_MICRO / 1 000 000`), sans unité |
 | d, d0 | float | > 0 | calculated | Écart des doigts, courant et initial |
 
 **Output Range:** z dans [1, 2] ; le dernier pas est tronqué à la borne (aucun dépassement).
@@ -318,13 +318,13 @@ w.x = −2,571 → x = −3, hors carte.
 
 The tap slop formula is defined as:
 
-`slop_px = TAP_SLOP_FACTOR * tile_pt * px_per_pt` ; défilement ssi `dist² > slop_px²`
+`slop_px = TAP_SLOP_MILLI * tile_pt * px_per_pt` ; défilement ssi `dist² > slop_px²`
 
 **Variables:**
 
 | Variable | Type | Range | Source | Description |
 |---|---|---|---|---|
-| TAP_SLOP_FACTOR | float | 0,3..0,7 | data file (0,5) | Fraction de tuile |
+| TAP_SLOP_MILLI | int | 300..700 | data file (500) | Fraction de tuile en millièmes ; la formule lit `TAP_SLOP_MILLI / 1000` |
 | px_per_pt | float | 1..4 | calculated | Android : dpi / 160 ; iOS : facteur d'échelle ; dépend du mode d'étirement (règle 17, ADR) |
 | dist | float | ≥ 0 | calculated | Distance entre la pose et le doigt, en px |
 
@@ -385,7 +385,7 @@ The focus formula is defined as:
 | Variable | Type | Range | Source | Description |
 |---|---|---|---|---|
 | (fx, fy) | int | 0..W−1, 0..H−1 | calculated | Tuile à montrer |
-| K | float | 0..1 | data file (`FOCUS_CLEARANCE_TILES` = 0,5) | Dégagement entre le bord de la tuile et le bord du rectangle |
+| K | float | 0..1 | calculé : `FOCUS_CLEARANCE_MILLI / 1000` (`FOCUS_CLEARANCE_MILLI` = 500) | Dégagement entre le bord de la tuile et le bord du rectangle |
 | g | float | ≥ 0 | calculated | Demi-fenêtre où `p` ne déclenche aucun mouvement |
 
 **Output Range:** `c' = c` si `p` est déjà dans la fenêtre (règle 20c : aucun recentrage) ; sinon décalage minimal, axes indépendants. Un axe verrouillé reste inchangé. Le clamp prime ; la tuile reste entièrement visible tant que K ≤ M + 0,5 (vrai : 0,5 ≤ 1,5).
@@ -453,7 +453,7 @@ affichées : `min(n, W)`
 - **Si le rectangle rétrécit ou grandit pendant un zoom** (insets, pliage ou dépliage, écran partagé, police système à 150 %): `tile_pt` ne change pas, car ses bornes sont absolues en pt ; seuls le centre (formule 6) et le focus (formule 7) sont recalculés.
 - **Si l'écran passe de portrait à paysage (ou l'inverse) en partie**: contact abandonné. Le centre `c` (en tuiles) et `tile_pt` sont conservés, puis le clamp de la formule 6 s'applique avec la nouvelle marge M ; le centre peut bouger si la nouvelle plage l'exclut.
 - **Si `W + 2M ≤ 2h` sur un axe** (10 × 10 au zoom minimal en portrait, axe vertical : 10 + 4 = 14 ≤ 14,84): la carte est centrée et verrouillée sur cet axe ; le défilement de cet axe est ignoré, les boutons de zoom restent actifs. Un appui hors carte est un fond vide (désélection). 16 × 16 ne se verrouille jamais.
-- **Si le zoom maximal est appliqué sur W = 16** (992 pt): en double précision l'erreur reste de l'ordre de 1e-13 pt. Le `Vector2` d'une build standard est en simple précision (NOT SOURCEABLE ici) : l'erreur y reste inférieure à environ 1e-4 pt, sous `ZOOM_EPS`. Un bord exact va à la tuile suivante, sans effet de jeu.
+- **Si le zoom maximal est appliqué sur W = 16** (992 pt): en double précision l'erreur reste de l'ordre de 1e-13 pt. Le `Vector2` d'une build standard est en simple précision (NOT SOURCEABLE ici) : l'erreur y reste inférieure à environ 1e-4 pt, sous `ZOOM_EPS_MICRO`. Un bord exact va à la tuile suivante, sans effet de jeu.
 
 ### Recentrage
 
@@ -509,20 +509,22 @@ affichées : `min(n, W)`
 
 ## Tuning Knobs
 
+*Entiers seulement dans les fichiers de données (ADR-0009) : les facteurs sont en millièmes (`_MILLI`) ou millionièmes (`_MICRO`) et divisés au chargement ; ces calculs de caméra sont de la présentation, non des règles de jeu. Renommés le 2026-10-31 (GDD SYNC avec ADR-0009).*
+
 *Dans un fichier de données (`assets/data/`), sauf la tuile minimale, qui est un plancher
 d'accessibilité et non un réglage. Valeurs de départ, à jouer sur appareil.*
 
 | Paramètre | Valeur | Plage sûre | Trop haut | Trop bas | Interagit avec |
 |---|---|---|---|---|---|
-| `TAP_SLOP_FACTOR` | 0,5 tuile | 0,3..0,7 | Un léger défilement est lu comme un appui : ordres non voulus | Un doigt qui tremble défile au lieu de viser | Formule 4 ; taille de tuile ; accessibilité (tolérance au glissement) |
+| `TAP_SLOP_MILLI` | 500 (0,5 tuile) | 300..700 | Un léger défilement est lu comme un appui : ordres non voulus | Un doigt qui tremble défile au lieu de viser | Formule 4 ; taille de tuile ; accessibilité (tolérance au glissement) |
 | `ZOOM_MIN_TILE_PT` | 31 pt (plancher) | Non réglable | — | Tuiles trop petites pour le pouce (`accessibility-requirements.md`) | Colonnes par défaut (`hud.md`) |
-| `ZOOM_MAX_FACTOR` | 2 | 1,5..3 | Tuiles énormes, très peu de carte visible | Le zoom n'aide presque plus les mains peu précises | Formules 1, 2 et 6 |
-| `ZOOM_STEP_FACTOR` | 2^(1/3) ≈ 1,26 | 1,15..1,5 | Peu de pas, zoom brutal | Beaucoup d'appuis pour parcourir la plage | Formule 2 |
+| `ZOOM_MAX_MILLI` | 2000 (2×) | 1500..3000 | Tuiles énormes, très peu de carte visible | Le zoom n'aide presque plus les mains peu précises | Formules 1, 2 et 6 |
+| `ZOOM_STEP_MILLI` | 1260 (2^(1/3) ≈ 1,26) | 1150..1500 | Peu de pas, zoom brutal | Beaucoup d'appuis pour parcourir la plage | Formule 2 |
 | `EDGE_MARGIN_TILES` | 2 | 2..3 | La carte se perd, on voit du vide | Sous 2 : une tuile de coin reste sous la grappe (48 / 31 ≈ 1,55 tuile au zoom minimal) | Formule 6 ; grappe de boutons |
-| `FOCUS_CLEARANCE_TILES` | 0,5 | 0..1 | La caméra bouge pour un focus déjà visible | Une tuile de focus peut être coupée par le bord | Formule 7 ; règle 20c |
+| `FOCUS_CLEARANCE_MILLI` | 500 (0,5 tuile) | 0..1000 | La caméra bouge pour un focus déjà visible | Une tuile de focus peut être coupée par le bord | Formule 7 ; règle 20c |
 | `RECENTER_MS` | 250 ms | 150..300 | Lent, gêne la lecture | Saut brusque, désorientant | Animations réduites (instantané) |
 | `cols_default` | 8 portrait / 12 paysage | 6..10 / 10..14 (`hud.md`) | Tuiles plus petites | Tuiles plus grandes, moins de carte | Formule 1 — valeur possédée par le HUD |
-| `ZOOM_EPS` | 0,001 | 0,0001..0,01 | Zoom rendu trop tôt | Battement aux bornes (flottants) | Formule 2 |
+| `ZOOM_EPS_MICRO` | 1000 (0,001) | 100..10000 | Zoom rendu trop tôt | Battement aux bornes (flottants) | Formule 2 |
 
 *Constante de règle, non réglable : une seule commande par image (Edge Cases).*
 
@@ -649,7 +651,7 @@ carte de 350 × 460 pt en portrait (question ouverte).*
 - AC-C7 : annulation d'un contact par le système (repli : nouvelle pose du même index de doigt).
 - Fusion des événements d'entrée : un aller-retour au-delà de la demi-tuile peut être manqué.
 - AC-C18 et AC-C24 : mode d'étirement et densité réelle (`px_per_pt`).
-- Précision de `Vector2` en simple précision (erreur attendue < 1e-4 pt, à comparer à `ZOOM_EPS`).
+- Précision de `Vector2` en simple précision (erreur attendue < 1e-4 pt, à comparer à `ZOOM_EPS_MICRO`).
 - Lecteur d'écran (TalkBack, VoiceOver) : aucun critère écrit.
 - AC-C32 : budget de mémoire inexistant.
 - Choix du nœud de caméra (projection) : conditionne la lecture « tuile sous le doigt ».

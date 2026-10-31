@@ -394,6 +394,26 @@ performance_budgets:
     added: 2026-10-30
     revised: ""
 
+  - system: vision-recompute
+    status: active
+    budget_ms: 1.0
+    adr: docs/architecture/adr-0007-vision-et-visibilite.md
+    notes: "Recalcul de vue pour les DEUX factions par commande RÉELLE, dans l'image du commit ; distinct du 0,3 ms de validation plus application des commandes de l'IA (les simulations ne recalculent pas) ; mesuré 43 µs par faction sur PC sans occlusion, Android non mesuré ; repli : compteur par tuile"
+    referenced_by:
+      - docs/architecture/adr-0007-vision-et-visibilite.md
+    added: 2026-10-31
+    revised: ""
+
+  - system: move-range-query
+    status: active
+    budget_ms: 2.0
+    adr: docs/architecture/adr-0010-entrees-tactiles-et-camera.md
+    notes: "Plage de déplacement (RuleTable.check_move_range) à la sélection ou au changement de révision ; au-delà, WorkerThreadPool et affichage entier à la fin ; à mesurer sur l'appareil"
+    referenced_by:
+      - docs/architecture/adr-0010-entrees-tactiles-et-camera.md
+    added: 2026-10-31
+    revised: ""
+
   - system: ai-runner-frame
     status: active
     budget_ms: 2.0
@@ -512,6 +532,61 @@ api_decisions:
 #
 # Register a pattern when an ADR explicitly bans it AND other ADRs might
 # unknowingly use it (i.e., it's a tempting but wrong approach for this project).
+
+  - purpose: vision_and_visibility
+    status: active
+    api: "VisionService (fonctions sans état) seul écrivain de la tranche Visibilité et du ViewCache ; ViewCache transitoire copié EN PROFONDEUR par duplicate_state (Array.duplicate superficiel interdit), jamais sérialisé ni comparé ; FieldTable et rayons tenus par VisionContext injecté ; can_see / can_see_unit / can_see_node prédicat unique pour FactionView et filtered_copy (terrain masqué, ligne de l'autre faction vide) ; recompute et reveal_step dans apply rendent VisionDelta ; simulations de l'IA sans recalcul ; event_visible(avant, après)"
+    not: "vision stockée dans l'état, décision de visibilité hors VisionService, cache global singleton, FactionView et filtered_copy sur des prédicats différents"
+    adr: docs/architecture/adr-0007-vision-et-visibilite.md
+    reason: "Frontière anti-fuite ; micro-banc : recalcul 43 µs par faction, copie du cache 0,26 µs"
+    referenced_by:
+      - docs/architecture/adr-0007-vision-et-visibilite.md
+    added: 2026-10-31
+    revised: ""
+
+  - purpose: composition_root
+    status: active
+    api: "un Bootstrap unique dans src/app/ ; AppContext (processus) et GameSession (partie) ; SessionFactory.build(app, state, ports{event_sink, pacing_gate}) pour partie neuve et chargée, MatchScreen construit sans liaisons puis bind(session) ; TestSessionFactory dans tests/fixtures ; aucun autoload"
+    not: "autoload, service locator, get_node pour trouver un service, Core qui référence Presentation, construction d'une dépendance par le système qui l'utilise"
+    adr: docs/architecture/adr-0008-racine-de-composition.md
+    reason: "ADR-0002 interdit les singletons ; ports injectés dans un seul endroit"
+    referenced_by:
+      - docs/architecture/adr-0008-racine-de-composition.md
+    added: 2026-10-31
+    revised: ""
+
+  - purpose: game_data_files
+    status: active
+    api: "assets/data/<domaine>.json, entiers seulement (suffixes _pct, _milli, _ms), DataSchema strict, DataCatalog.load_all(DataSource) chargé une fois au démarrage, objets typés immuables, content_hash SHA-256 dans l'en-tête du CommandLog"
+    not: "nombre fractionnaire dans les données, valeur par défaut silencieuse, rechargement en cours de partie, accès statique global au catalogue, valeur de jeu codée en dur, .tres pour les réglages"
+    adr: docs/architecture/adr-0009-donnees-de-jeu.md
+    reason: "Mesuré : JSON.parse rend tous les nombres en float, écrase les clés dupliquées ; déterminisme exige des entiers"
+    referenced_by:
+      - docs/architecture/adr-0009-donnees-de-jeu.md
+    added: 2026-10-31
+    revised: ""
+
+  - purpose: touch_input_and_camera
+    status: active
+    api: "PointerEvent (ScreenTouch / ScreenDrag seuls, InputEventMouse ignoré, accumulation désactivée) -> GestureInterpreter pur -> Tap / Scroll / Pinch / Cancel ; MapCamera pure pilotant le transform d'un Node2D ; TapResolver pur (tableau B du GDD 4) ; commande par check puis submit ; plage de déplacement par RuleTable.check_move_range (parité avec validate) ; échelle en dp par Window.content_scale_factor = dpi / 160"
+    not: "Camera2D pour la carte, commande née d'un défilement ou d'un contact interrompu, portée calculée par le système 4, mode d'interaction stocké dans l'état, taille tactile en pixels"
+    adr: docs/architecture/adr-0010-entrees-tactiles-et-camera.md
+    reason: "La portée affichée est la validation (pilier 4) ; point indépendant de la densité (GDD 4, règle 17)"
+    referenced_by:
+      - docs/architecture/adr-0010-entrees-tactiles-et-camera.md
+    added: 2026-10-31
+    revised: ""
+
+  - purpose: test_framework
+    status: active
+    api: "gdUnit4 6.2.2 épinglé (addons/gdUnit4/plugin.cfg) et commité, testing.framework: gdunit4 ; headless ; tests/unit|integration|performance|fixtures ; StateFactory et doublures partagées ; build_for_test ; tests de propriétés à graine fixe ; auto-tests shell des contrôles CI"
+    not: "GUT, test dépendant de l'horloge système, du hasard du moteur ou du système de fichiers réel, test désactivé pour passer la CI, contrôle CI jamais vu échouer"
+    adr: docs/architecture/adr-0011-cadre-de-tests.md
+    reason: "Standards du projet et run-and-observe.md écrits pour gdUnit4 (exécuté sur Godot 4.7.2)"
+    referenced_by:
+      - docs/architecture/adr-0011-cadre-de-tests.md
+    added: 2026-10-31
+    revised: ""
 
 forbidden_patterns:
   - pattern: per_tile_node_or_material
@@ -683,3 +758,45 @@ forbidden_patterns:
     why: "Revue du 2026-10-30 (B1) : la planification sort du fil principal ; le déterminisme exige une fonction des entrées seules."
     adr: docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
+
+  - pattern: visibility_decided_outside_vision_service
+    status: active
+    description: "Aucun code hors VisionService ne décide de la visibilité ni ne lit le propriétaire réel d'une tuile pour une faction ; la validation passe par FactionView."
+    why: "Frontière anti-fuite : un seul prédicat, prouvé par le test de parité FactionView / filtered_copy."
+    adr: docs/architecture/adr-0007-vision-et-visibilite.md
+    added: 2026-10-31
+
+  - pattern: autoload_or_service_locator
+    status: active
+    description: "Aucun autoload ni service global ; une dépendance arrive par paramètre ; get_node('/root/…') pour trouver un service est interdit."
+    why: "ADR-0002 : pas de singleton ; doublures de test impossibles sinon."
+    adr: docs/architecture/adr-0008-racine-de-composition.md
+    added: 2026-10-31
+
+  - pattern: core_references_presentation
+    status: active
+    description: "Aucun fichier de src/core/** ne référence src/presentation/** ni src/app/**."
+    why: "Sens de dépendance Core vers Presentation unique ; contrôle CI check-layer-deps."
+    adr: docs/architecture/adr-0008-racine-de-composition.md
+    added: 2026-10-31
+
+  - pattern: float_in_game_data
+    status: active
+    description: "Aucun nombre fractionnaire dans assets/data/ ; les rapports se notent en _pct ou _milli, les durées en _ms."
+    why: "Entiers seulement (GDD 1, règle 6) ; JSON.parse rend des float qu'il faut valider."
+    adr: docs/architecture/adr-0009-donnees-de-jeu.md
+    added: 2026-10-31
+
+  - pattern: game_value_hardcoded
+    status: active
+    description: "Aucune valeur de réglage de jeu codée en dur dans un script : elle vient du DataCatalog injecté."
+    why: "Standards : valeurs pilotées par les données."
+    adr: docs/architecture/adr-0009-donnees-de-jeu.md
+    added: 2026-10-31
+
+  - pattern: command_from_scroll_or_cancelled_contact
+    status: active
+    description: "Aucune commande ne naît d'un défilement, d'un pincement ni d'un contact interrompu ; le système 4 ne calcule jamais de portée."
+    why: "GDD 4, règles 8 et 10 : test de la Player Fantasy et pilier 4."
+    adr: docs/architecture/adr-0010-entrees-tactiles-et-camera.md
+    added: 2026-10-31
