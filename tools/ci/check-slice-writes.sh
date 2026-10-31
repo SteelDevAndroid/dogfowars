@@ -15,7 +15,13 @@
 # Usage: tools/ci/check-slice-writes.sh [code_root=src] [extra_allowed=tests]
 # Exit 0: no access found outside the owners (also when the code root has no slice yet).
 # Exit 1: at least one access found; one line per access, "file:line: ...".
-# Exit 2: a slice file has no `# owner:` line (the check cannot judge it).
+# Exit 2: a slice file has no `# owner:` line, or two slices declare the same
+#         `_field` name (the check cannot tell whose field `.name` is: field names
+#         must be unique across slices, ADR-0003).
+#
+# Also caught: dynamic access (get/set/get_indexed/set_indexed of "_f", or ["_f"])
+# outside the owners. The extra dir (tests) may READ private fields but not write
+# them: an assignment (=, +=, ...) to `.name` there is reported.
 
 set -u
 ROOT="${1:-src}"
@@ -34,6 +40,14 @@ fi
 
 violations=0
 missing_owner=0
+
+# field names must be unique across slices
+dups=$(for sf in $slices; do grep -E '^[[:space:]]*(@export[[:space:]]+)?var[[:space:]]+_[A-Za-z0-9_]+' "$sf" \
+        | sed -E 's/^[[:space:]]*(@export[[:space:]]+)?var[[:space:]]+(_[A-Za-z0-9_]+).*/\2/' | sort -u; done | sort | uniq -d)
+if [ -n "$dups" ]; then
+    for d in $dups; do echo "$ROOT: private field $d is declared by more than one slice (names must be unique)"; done
+    missing_owner=1
+fi
 
 for slice_file in $slices; do
     slice_name=$(grep -E '^class_name[[:space:]]+' "$slice_file" | head -1 | sed -E 's/^class_name[[:space:]]+([A-Za-z0-9_]+).*/\1/')
@@ -55,16 +69,40 @@ for slice_file in $slices; do
             [ -z "$file" ] && continue
             [ "$file" = "$slice_file" ] && continue
             allowed=0
-            for o in $owners $ALLOWED_EXTRA; do
+            for o in $owners; do
                 case "$file" in
                     "$o"*|./"$o"*) allowed=1; break ;;
                 esac
             done
+            extra=0
+            case "$file" in "$ALLOWED_EXTRA"*|./"$ALLOWED_EXTRA"*) extra=1 ;; esac
+            if [ "$allowed" -eq 0 ] && [ "$extra" -eq 1 ]; then
+                # tests may read, not write
+                if printf '%s\n' "$rest" | grep -qE "\.${field}(\[[^]]*\])?[[:space:]]*([-+*/|&^]|<<|>>)?=[^=]"; then
+                    echo "$file:$line: write to private field $field of $slice_name from $ALLOWED_EXTRA"
+                    violations=$((violations + 1))
+                fi
+                continue
+            fi
             if [ "$allowed" -eq 0 ]; then
                 echo "$file:$line: access to private field $field of $slice_name (owners: $owners)"
                 violations=$((violations + 1))
             fi
-        done < <(grep -rnE --include='*.gd' "\.${field}([^A-Za-z0-9_]|$)" "$ROOT" 2>/dev/null)
+        done < <(grep -rnE --include='*.gd' "\.${field}([^A-Za-z0-9_]|$)" "$ROOT" $( [ -d "$ALLOWED_EXTRA" ] && echo "$ALLOWED_EXTRA" ) 2>/dev/null)
+
+        # dynamic access: get("_f"), set("_f", ...), get_indexed/set_indexed, ["_f"]
+        while IFS=: read -r file line rest; do
+            [ -z "$file" ] && continue
+            [ "$file" = "$slice_file" ] && continue
+            allowed=0
+            for o in $owners; do
+                case "$file" in "$o"*|./"$o"*) allowed=1; break ;; esac
+            done
+            if [ "$allowed" -eq 0 ]; then
+                echo "$file:$line: dynamic access to private field $field of $slice_name"
+                violations=$((violations + 1))
+            fi
+        done < <(grep -rnE --include='*.gd' "(get|set|get_indexed|set_indexed)\([[:space:]]*[\"']${field}[\"']|\[[[:space:]]*[\"']${field}[\"'][[:space:]]*\]" "$ROOT" $( [ -d "$ALLOWED_EXTRA" ] && echo "$ALLOWED_EXTRA" ) 2>/dev/null)
     done
 done
 

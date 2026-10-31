@@ -1,7 +1,7 @@
 # ADR-0006: Sauvegarde — enveloppe binaire à préfixe figé, écriture synchrone en série, port d'écriture injecté
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-30
@@ -31,7 +31,7 @@ Un unique écrivain en série (`SaveStore`) écrit quatre fichiers sous `user://
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0003 (`to_bytes`, `from_bytes`, schéma de contenu, `restore_from`) ; ADR-0004 (`PostCommitPort`, ordre sauvegarde avant `EventSink.push`, `ProfilePort`, commande interne VALIDER_LA_LECTURE) — **encore Proposed** : cet ADR ne peut pas être accepté avant eux, et l'amendement d'ADR-0003 (enveloppe) passe en même temps |
+| **Depends On** | ADR-0003 (`to_bytes`, `from_bytes`, schéma de contenu, `restore_from`) ; ADR-0004 (`PostCommitPort`, ordre sauvegarde avant `EventSink.push`, `ProfilePort`, commande interne VALIDER_LA_LECTURE) — Accepted avant celui-ci ; l'amendement d'ADR-0003 (enveloppe) est fait |
 | **Enables** | Stories de persistance (partie, profil, migration, réconciliation) ; menus (18) ; chronique (14) |
 | **Blocks** | Stories Core : sauvegarde, chargement, réconciliation du journal de ruines, migration |
 | **Ordering Note** | Après ADR-0003 et ADR-0004. La mesure Android est un critère de validation, pas une condition d'acceptation, **parce que** chaque point NOT SOURCEABLE a un repli écrit dans la Décision (renommage, cycle de vie, exclusion, fil d'écriture) |
@@ -64,7 +64,7 @@ Le GDD 16 fixe quatre fichiers, des déclencheurs (après **chaque commande appl
 
 **5. `SaveStore` : un seul écrivain en série.** Partie et profil passent par le même écrivain, suppressions comprises ; le coordinateur et le profil (`ProfileStore.request_write()` pour les écritures hors commit : réglages, score, réinitialisation, arrière-plan, nouvel essai) ne l'appellent que de façon synchrone. Une seule écriture est donc en cours à tout instant, par construction.
 
-**6. Séquence d'écriture, sûre à chaque étape.** Entre deux commandes, sur le fil principal : sérialiser, construire l'enveloppe (`PackedByteArray`, immuable ensuite) ; écrire `*.tmp` (fermé avant tout renommage, mesuré) ; **relire et vérifier** son empreinte ; si le courant est valide (drapeau « courant valide », positionné par le dernier chargement ou la dernière écriture vérifiée, remis à « inconnu » après tout échec de renommage) : supprimer l'ancien `*.bak`, renommer le courant en `*.bak` ; supprimer le courant s'il existe encore, renommer `*.tmp` en courant. Comme `rename` supprime la cible avant de déplacer sur Windows, la suppression explicite de la cible précède **toujours** le renommage, de sorte que le comportement ne dépende pas de la plateforme. Arrêt à chaque étape : pendant `*.tmp` → courant et `.bak` intacts ; après vérification avant rotation → courant intact, `.tmp` jeté ; entre rotation et renommage → pas de courant, `.bak` = sauvegarde précédente valide (une sauvegarde perdue, acceptée par le GDD) ; après renommage → nouvel état. Face à une **coupure d'alimentation**, la relecture vérifie le cache du système, pas le disque : le repli sur `.bak` est la seule défense (Verification 4).
+**6. Séquence d'écriture, sûre à chaque étape.** Entre deux commandes, sur le fil principal : sérialiser, construire l'enveloppe (`PackedByteArray`, immuable ensuite) ; écrire `*.tmp` (fermé avant tout renommage, mesuré) ; **relire et vérifier** son empreinte ; si le courant est valide (drapeau « courant valide », positionné par le dernier chargement ou la dernière écriture vérifiée, remis à « inconnu » après tout échec de renommage) : supprimer l'ancien `*.bak`, renommer le courant en `*.bak` ; si un courant de validité inconnue existe encore, le **mettre de côté** (renommé, `BAD_FILE_CAP` respecté, jamais supprimé) au lieu de le supprimer, puis renommer `*.tmp` en courant. Comme `rename` supprime la cible avant de déplacer sur Windows, la suppression explicite de la cible précède **toujours** le renommage, de sorte que le comportement ne dépende pas de la plateforme. Arrêt à chaque étape : pendant `*.tmp` → courant et `.bak` intacts ; après vérification avant rotation → courant intact, `.tmp` jeté ; entre rotation et renommage → pas de courant, `.bak` = sauvegarde précédente valide (une sauvegarde perdue, acceptée par le GDD) ; après renommage → nouvel état. Face à une **coupure d'alimentation**, la relecture vérifie le cache du système, pas le disque : le repli sur `.bak` est la seule défense (Verification 4).
 
 **7. Écriture synchrone, fil d'écriture en déclencheur de révision.** L'écriture se fait **dans `on_commit`, sur le fil principal**, avant `EventSink.push` (ADR-0004 §4) : « une écriture à la fois » et l'ordre partie puis profil sont ainsi garantis, sans amender ADR-0004. La mesure de `t_write` (AC-F1) tranche. Si elle dépasse le budget, **passer à un fil d'écriture est un amendement de cet ADR et d'ADR-0004 §4**, qui impose : (a) les octets capturés au commit dans un emplacement unique écrasé, jamais un drapeau resérialisé plus tard (sinon la capture suivante pourrait tomber pendant la phase ennemie) ; (b) un panneau de fragment qui attend une « révision durable ≥ R » au lieu de retarder le push. **Conséquence de la sauvegarde après chaque commande (2026-10-30)** : une phase ennemie de N commandes fait N écritures synchrones (jusqu'à plusieurs dizaines par tour) ; chaque commande de l'IA est déjà cadencée par le `PacingGate`, donc deux écritures ne se chevauchent pas, mais **chacune retarde son image** : le fil d'écriture devient probable, pas seulement possible, si `t_write` dépasse le budget sur l'appareil de référence. **GDD SYNC** : la règle 10 du GDD 16 dit que l'écriture d'environ 20 ms est « masquée par le délai de 400 ms », ce qui n'est vrai qu'en asynchrone ; en synchrone, ces 20 ms retardent le début de l'onde et dépassent le budget de 8 ms (règle 7).
 
@@ -83,7 +83,7 @@ Le GDD 16 fixe quatre fichiers, des déclencheurs (après **chaque commande appl
         (prédicat : toute commande appliquée du pipeline réel ∨ fin de partie)      ProfileStore.request_write()
                                    └──────────────► SaveStore (écrivain unique, synchrone, en série) ◄───────────┘
                           sérialiser (to_bytes) + enveloppe (préfixe figé + SHA-256) → *.tmp → relire/vérifier
-                          → supprimer .bak → courant→.bak (si valide) → supprimer courant → *.tmp→courant      [via FileStore]
+                          → supprimer .bak → courant→.bak (si valide) → courant inconnu : mis de côté → *.tmp→courant      [via FileStore]
         user://match.sav  match.bak  profile.sav  profile.bak
  Lancement : supprimer *.tmp → profil → partie (courant, puis .bak) → réconciliation du journal → on_state_loaded() → reprise éventuelle de la phase ennemie à la commande suivante
 ```
@@ -227,4 +227,4 @@ Sans objet : aucun code de production n'existe.
 
 ## Related
 - GDD : `design/gdd/sauvegarde-automatique.md` (16), `profil-donnees-meta.md` (22), `modele-etat-partie.md` (1), `tours-conditions-victoire.md` (3), `ruines-fragments.md` (13), `commandes-evenements.md` (23). **GDD SYNC** : GDD 16 (formule 4 : `SHA-256(préfixe ‖ charge utile)`, 32 octets, empreinte en fin d'enveloppe et non dans l'en-tête ; règle 10 : l'écriture de 20 ms n'est masquée que si asynchrone ; Limites connues : retirer « stabilité d'un CRC32 natif ») ; GDD 13 règle 14 (écrire « la partie est écrite, puis le profil »).
-- ADR-0003 (à amender : `to_bytes` rend la charge utile seule, l'intégrité est contrôlée par cet ADR), ADR-0004 §4 (déclencheurs : chaque commande du joueur), ADR-0005 §5.
+- ADR-0003 (à amender : `to_bytes` rend la charge utile seule, l'intégrité est contrôlée par cet ADR), ADR-0004 §4 (déclencheurs : chaque commande appliquée, IA comprise), ADR-0005 §5.

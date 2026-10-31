@@ -1,7 +1,7 @@
 # ADR-0001: Rendu des tuiles — MultiMesh, deux vec4 par instance, module d'onde pur
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-30
@@ -119,7 +119,6 @@ func set_palette(mode: int, faction: int) -> void                     # n'écrit
 func set_reduced_motion(on: bool) -> void
 ```
 `StateView` est l'interface en lecture seule déclarée par ADR-0003 (Foundation) et reçue par les gestionnaires d'ADR-0002 (le `TileViewQuery` du premier brouillon n'existe plus). `ColorTilesChanged` est une classe `RefCounted` typée dont `event_id = (révision, index)`. Contrat de données : le tableau de la section Decision ; le miroir CPU et le shader lisent exactement ces huit canaux.
-Contrat de données : le tableau de la section Decision. Le miroir CPU et le shader lisent exactement ces huit canaux.
 
 ### Implementation Guidelines
 - Le moteur de rendu **doit** ne lire que l'état présenté (événements) et, à l'idle seulement, l'état interrogé (`hud-systeme.md`, règle 2) ; il **ne doit jamais** écrire d'état de jeu.
@@ -159,7 +158,7 @@ Contrat de données : le tableau de la section Decision. Le miroir CPU et le sha
 ## Consequences
 
 ### Positive
-- Un dessin pour toute la carte ; 48 octets par instance, soit environ 12 Ko de tampon pour 256 tuiles (16 octets de données personnalisées et 16 de couleur d'instance).
+- Un dessin pour toute la carte ; 64 octets par instance (`TRANSFORM_2D` 8 flottants, données personnalisées 4, couleur d'instance 4 : 16 flottants), soit environ 16 Ko de tampon pour 256 tuiles.
 - La règle 15 (réécriture sans saut) et AC-RC22 (brouillard sans redémarrage) sont portées par le contrat.
 - La source de vérité est testable sans moteur de rendu ; le shader n'est qu'un portage vérifié.
 - Palette, animations réduites et daltonisme sans toucher à l'état (règle 20).
@@ -197,7 +196,7 @@ Contrat de données : le tableau de la section Decision. Le miroir CPU et le sha
 
 ## Performance Implications
 - **CPU**: écritures seulement pour les tuiles changées (jusqu'à 49 par capture, 256 pour une élimination) ; 0,6 ms de delta de `_process` en 16×16 sur le PC de test avec un seul vec4 (non représentatif d'Android ; second vec4 non mesuré).
-- **Memory**: 48 octets par instance (≈ 12 Ko pour 256 tuiles) plus le miroir CPU de 32 octets par tuile.
+- **Memory**: 64 octets par instance (≈ 16 Ko pour 256 tuiles) plus le miroir CPU de 32 octets par tuile.
 - **Load Time**: un shader, compilation à la première utilisation ; Shader Baker envisagé.
 - **Network**: sans objet.
 
@@ -213,4 +212,4 @@ Sans objet : aucun code de production n'existe. Le prototype `prototypes/rendu-t
 - Prototype : `prototypes/rendu-tuiles/REPORT.md`.
 - GDD : `design/gdd/recoloration-monde.md` (15), `brouillard-vision.md` (5), `carte-tuiles-terrain.md` (2), `hud-systeme.md` (17), `commandes-evenements.md` (23).
 - Art bible : `design/art/art-bible.md` §4, §8.
-- ADR à écrire : ADR-0002 (modèle d'événements de présentation et séquenceur).
+- ADR-0002 (modèle d'événements de présentation et séquenceur) : écrit (Proposed), dépendance directe.

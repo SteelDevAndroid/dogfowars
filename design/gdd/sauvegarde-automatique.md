@@ -134,9 +134,7 @@ sont renvoyés à l'ADR de persistance.*
     sauvegardée ; le profil enregistre le fragment et est écrit ; l'entrée passe à
     « validée » en mémoire. **Le panneau de fragment n'apparaît qu'une fois l'écriture
     de la partie terminée** (CD-GDD-ALIGN) : le joueur ne voit jamais un fragment qu'un
-    arrêt pourrait effacer. (GDD SYNC, ADR-0006 : l'écriture de la partie est **synchrone** sur le fil principal ; ces 20 ms ne sont masquées par le délai de 400 ms qu'en asynchrone, et en synchrone ils retardent le début de l'onde et dépassent le budget de 8 ms de la règle 7 : à mesurer, AC-F1.) L'écriture (environ 20 ms) est masquée par le délai de
-    400 ms qui précède déjà le panneau, le temps de la recoloration
-    (`design/ux/hud.md`). Aucune écriture supplémentaire de la partie n'est nécessaire :
+    arrêt pourrait effacer. (GDD SYNC, ADR-0006 : l'écriture de la partie est **synchrone** sur le fil principal ; ces 20 ms ne sont masquées par le délai de 400 ms qu'en asynchrone, et en synchrone ils retardent le début de l'onde et dépassent le budget de 8 ms de la règle 7 : à mesurer, AC-F1.) Aucune écriture supplémentaire de la partie n'est nécessaire :
     la réconciliation au chargement est idempotente. L'ordre « partie d'abord » est le
     seul sûr : « profil d'abord » laisserait un arrêt faire relire la ruine.
 11. **Fin de partie.** La partie terminée est sauvegardée, puis le score est soumis au
@@ -586,7 +584,7 @@ absents. Aucun accès fichier dans les tests [U].*
 - Non vérifiables avant l'ADR : atomicité du remplacement et chemin `user://` sur
   Android (AC-04, AC-F2), déclencheur d'arrière-plan (AC-08, AC-09), exclusion de la
   sauvegarde Android et équivalent iOS (AC-18), écriture hors du fil principal (AC-F1),
-  stabilité d'un CRC32 natif.
+  stabilité de SHA-256 (`HashingContext`) sur les cibles.
 - Valeurs provisoires : t_action_min (250 ms), budgets de 8 et 150 ms, modèle de
   l'appareil de référence ; la forme de l'avertissement « non bloquant » appartient aux
   menus (18).

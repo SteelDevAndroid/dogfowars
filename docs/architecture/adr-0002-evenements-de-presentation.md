@@ -1,7 +1,7 @@
 # ADR-0002: Événements de présentation — file explicite, horloge de présentation et séquenceur en machine à états
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-30
@@ -34,7 +34,7 @@ Les commandes publient leurs événements en lots dans une file explicite, par u
 | **Depends On** | ADR-0003 `docs/architecture/adr-0003-etat-de-partie.md` (déclare `StateView`, interface de lecture seule ; couche Foundation) — doit être Accepted avant l'acceptation de celui-ci |
 | **Enables** | ADR-0001 (rendu des tuiles) ; ADR audio ; ADR de composition des couches de présentation |
 | **Blocks** | Stories du séquenceur, de l'horloge, du HUD (distribution) et de la présentation de la recoloration. Les stories Logic de `EventQueue`, `EventSink` et de la fusion peuvent démarrer |
-| **Ordering Note** | À accepter **avant** ADR-0001. Les stories Core du pipeline de commandes attendent aussi l'ADR du modèle d'état. `StateView` est ici une **interface abstraite en lecture seule** ; l'ADR du modèle d'état l'implémentera |
+| **Ordering Note** | À accepter **après** ADR-0003 (qui déclare `StateView`) et **avant** ADR-0001. `StateView` est ici une **interface abstraite en lecture seule** ; ADR-0003 la déclare et l'implémente |
 
 ## Context
 
@@ -67,8 +67,8 @@ Le GDD 23 fixe que les événements d'une commande sont publiés en un lot aprè
 
 **5. Séquenceur en machine à états.** `PresentationSequencer` (`Node`, `process_priority` 0) avance dans `_process` : états `IDLE` et `PLAYING(lot, étape, échéance)`. Inactif, il dépile un lot ; pour chaque événement il appelle explicitement les gestionnaires **dans un ordre fixe** (rendu des tuiles, HUD, audio) ; chaque appel rend une `PresentationHold` (`duration_ms`) ; il passe à l'étape suivante quand `clock.current()` atteint l'échéance, et au lot suivant quand toutes les tenues du lot sont écoulées. `ctx.t0 = clock.current()` au moment du dépilement.
 - **Annulation et pause triviales** : annuler remet l'état à `IDLE` ; en pause l'horloge est arrêtée, aucune échéance n'avance. Il n'y a aucune coroutine orpheline.
-- **Séquences** : l'**ordre des étapes** est du code, une fonction testée par type de séquence (lecture de ruine : recentrage, onde, délai, panneau ; attaque : trait, cible, riposte, destruction ; action du tour ennemi) ; les **durées** sont des données (`assets/data/presentation/` : `DÉLAI_PANNEAU`, `DÉLAI_FERMETURE`, `ATTACK_LOCK_MS` — valeur unique, car le GDD 23 dit 1,6 s et le GDD 17 1,5 s —, `T_CRENEAU_RÉDUIT`, `Q_max`). Un langage de séquence en données est reporté au palier de lancement.
-- **Gestionnaires** (`PresentationHandler`, `RefCounted`) : `handle(event, ctx) -> PresentationHold`, `handle_merged(events, ctx)`, `on_idle(view)` (rappelé quand la file se vide ; sert E04, E07, E14, E19, E20, E23 et `undo_allowed`) et `rebuild_from_state(view)`. Au MVP il y a **deux gestionnaires réels** (tuiles, HUD) ; l'audio arrive plus tard avec le même contrat. Le rendu des tuiles passe par un **adaptateur** `TileRendererHandler` (référence injectée vers le `TileRenderer`) qui appelle `apply_color_event(event, ctx.t0)` et rend la durée d'onde.
+- **Séquences** : l'**ordre des étapes** est du code, une fonction testée par type de séquence (lecture de ruine : recentrage, onde, délai, panneau ; attaque : trait, cible, riposte, destruction ; action du tour ennemi) ; les **durées** sont des données (`assets/data/presentation.json`, ADR-0009 : `DÉLAI_PANNEAU`, `DÉLAI_FERMETURE`, `ATTACK_LOCK_MS` — valeur unique, car le GDD 23 dit 1,6 s et le GDD 17 1,5 s —, `T_CRENEAU_RÉDUIT`, `Q_max`). Un langage de séquence en données est reporté au palier de lancement.
+- **Gestionnaires** (`PresentationHandler`, `RefCounted`) : `handle(event, ctx) -> PresentationHold`, `handle_merged(events, ctx)`, `on_idle(view)` (rappelé quand la file se vide ; sert E04, E07, E14, E19, E20, E23 et `undo_allowed`) et `rebuild_from_state(view)`. Au MVP il y a **trois gestionnaires réels** (tuiles, HUD, caméra) : le `CameraHandler` (ADR-0010) rend un `PresentationHold` de `RECENTER_MS` (0 en animations réduites) pour le recentrage, première étape de la séquence de lecture d'une ruine, et mémorise la caméra à FINIR_LE_TOUR pour la restituer au début du tour du joueur ; l'audio arrive plus tard avec le même contrat. Le rendu des tuiles passe par un **adaptateur** `TileRendererHandler` (référence injectée vers le `TileRenderer`) qui appelle `apply_color_event(event, ctx.t0)` et rend la durée d'onde.
 
 **6. Animations réduites.** La fusion en créneaux de `T_CRENEAU_RÉDUIT` = 334 ms ne concerne que les événements **fusionnables** : `ColorTilesChanged`, `TilesRevealed` et les changements de luminance forte. Ne sont **jamais** fusionnés : les étapes d'attaque (mêmes étapes et même ordre, chiffres fixes 800 ms, trait fixe 150 ms), `RuinRead` et son panneau, `GameEnded`. C'est le **gestionnaire** qui calcule la « dernière valeur par tuile » à partir de la liste fusionnée (`handle_merged`) ; le séquenceur n'a pas à connaître la charge. La vitesse **Instantanée** du tour ennemi est un autre réglage (échelle de l'horloge, journal conservé), distinct de la limite de 3 flashs.
 
@@ -107,7 +107,8 @@ func on_idle(view: StateView) -> void
 func rebuild_from_state(view: StateView) -> void
 
 class_name PresentationHold extends RefCounted      # duration_ms: int
-class_name SequenceContext extends RefCounted       # t0: float, direct: bool, clock: PresentationClock
+class_name ClockSource extends RefCounted            # port : current() -> float ; PresentationClock l'implémente, FakeClock (tests) aussi
+class_name SequenceContext extends RefCounted       # t0: float, direct: bool, clock: ClockSource
 # StateView : déclarée par ADR-0003 (Foundation) ; les gestionnaires la reçoivent, ils ne la définissent pas
 
 class_name CommandGate extends RefCounted
@@ -115,7 +116,7 @@ func enter_dispatch() -> void
 func exit_dispatch() -> void
 func lock(reason: StringName) -> void               # faction du joueur seulement
 func unlock(reason: StringName) -> void
-func is_locked(faction: int) -> bool                # vrai si réentrance, ou verrou joueur pour la faction du joueur
+func is_locked(faction: int, emitter: int) -> bool  # vrai si réentrance, ou verrou joueur pour la faction du joueur ET un émetteur JOUEUR (l'IA et SYS, dont VALIDER_LA_LECTURE, ne sont jamais bloquées par un verrou)
 func clear_player_locks(except: StringName = &"") -> void
 ```
 
@@ -127,7 +128,7 @@ func clear_player_locks(except: StringName = &"") -> void
 - Les durées de séquence, `Q_max`, `T_CRENEAU_RÉDUIT`, `ATTACK_LOCK_MS` et les délais **doivent** rester dans des fichiers de données.
 - Le pipeline **ne doit jamais** connaître la file par un nom global : il reçoit un `EventSink`.
 - Le séquenceur et la file **doivent** pouvoir être construits sans scène, avec une horloge et des gestionnaires factices, pour les tests unitaires.
-- Les priorités de traitement sont explicites : `PresentationClock` −20, `TileTimeSource` −10, `PresentationSequencer` 0, `TileRenderer` 10 (la valeur la plus basse est appelée en premier).
+- Les priorités de traitement sont explicites : `PresentationClock` −20, `TileTimeSource` −10, `PresentationSequencer` 0, `TileRenderer` 10, `AiRunner` 20 (ADR-0005) (la valeur la plus basse est appelée en premier ; cette liste est la source unique).
 - `pop()` rend `null` quand la file est vide ; une classe par fichier `.gd`.
 
 ## Alternatives Considered
@@ -211,5 +212,5 @@ Sans objet : aucun code de production n'existe.
 
 ## Related
 - GDD : `design/gdd/commandes-evenements.md` (23), `hud-systeme.md` (17), `recoloration-monde.md` (15), `modele-etat-partie.md` (1, règle 9 et copies).
-- ADR-0001 (rendu des tuiles) : dépend de celui-ci ; à amender (adaptateur `TileRendererHandler`, `StateView`, `event_id`, propriété de l'horloge).
+- ADR-0001 (rendu des tuiles) : dépend de celui-ci ; amendé (adaptateur `TileRendererHandler`, `StateView`, `event_id`, propriété de l'horloge).
 - ADR-0003 (`StateView`, modèle d'état, copies) : celui-ci en dépend ; ordre d'acceptation ADR-0003, puis celui-ci, puis ADR-0001.

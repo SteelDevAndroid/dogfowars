@@ -214,7 +214,7 @@ tour 1**. Les valeurs chiffrées sont des valeurs de départ [PROP].*
     couvre (nœud perdu) est EXPLORÉE, jamais INCONNUE.
 24. **Sauvegarde et chargement.** La tranche Visibilité est sérialisée telle quelle (`découverte`, octet 1,
     `dormant_mémorisé`). Au chargement, le cache `vue_maintenant` est **reconstruit** depuis les sources ; si une
-    tuile du cache n'est pas `découverte`, ce bit est posé (trace au journal de développement) ; le cache de
+    tuile du cache n'est pas `découverte`, l'état est **corrompu et le fichier est refusé** (repli sur la copie de secours, ADR-0006 ; décision de l'ADR-0007, `from_bytes` ne répare jamais l'état) ; le cache de
     champs de vue (règle 10) est reconstruit depuis le terrain. Même sauvegarde, même vue.
 
 24bis. **Exception : le score décisif (17, E07).** Le score exact des deux camps est le seul agrégat public calculé sur des données hors vue : il dit « combien », jamais « où ». Aucune décomposition ni aucun delta n'est affiché, il se met à jour à l'idle de début de tour sans animation de variation (`design/gdd/hud-systeme.md`, règles 4 et 23). La règle 4 du HUD (« vue du joueur seulement ») s'entend sauf cet agrégat.
@@ -436,7 +436,7 @@ The ruin_chip_distance formula is defined as:
 - **Si un déplacement ne révèle rien de neuf** (EXPLORÉE → VISIBLE seulement): `a_révélé` est faux, ANNULER est permis, la tranche Visibilité est restaurée. **Si un pas découvre une tuile INCONNUE autour d'une ruine**: vrai par (a). **Si la ruine est lue**: vrai par (e), annulation refusée.
 - **Si l'autre faction réveille un dormant hors de la vue du joueur**: le marqueur (bit 2) reste affiché jusqu'à ce que la tuile soit VISIBLE ; il est alors effacé s'il n'y a plus de dormant. Aucune fuite.
 - **Si une ruine est lue**: son marqueur est remplacé par le glyphe « lu » et elle sort de la puce ; la distance est recalculée sur les autres ; s'il n'en reste aucune, la puce est masquée.
-- **Si un chargement trouve un bit 0 stocké non nul**: il est ignoré et remis à 0, avec une trace au journal de développement ; le cache `vue_maintenant` est recalculé ; si une tuile recalculée VISIBLE a `découverte` = 0, ce bit est posé (invariant b0 ⇒ b1) et la correction est journalisée.
+- **Si un chargement trouve un bit 0 stocké non nul**: il est ignoré et remis à 0, avec une trace au journal de développement ; le cache `vue_maintenant` est recalculé ; si une tuile recalculée VISIBLE a `découverte` = 0, le fichier est refusé comme corrompu (invariant b0 ⇒ b1, ADR-0007), sans correction silencieuse.
 - **Si une sauvegarde est rechargée puis resérialisée sans commande**: la tranche est identique octet pour octet (576 ou 1 024 octets) ; le cache de champs n'est ni écrit ni comparé.
 - **Si une faction est éliminée**: à l'élimination, son cache `vue_maintenant` est vidé (tuiles EXPLORÉES) et elle n'est plus recalculée ; `découverte` et l'octet 1 sont conservés. À valider.
 - **Si le drapeau d'IA passive est actif**: la vue de l'IA est quand même recalculée à chaque commande listée (règle 9), car la validation et les tests la lisent ; elle ne sert à aucune décision.
@@ -637,7 +637,7 @@ validée par l'art-director ; **Appareil** = sur l'appareil cible. [BLOQUÉ n] =
 - **AC-BR35** (Logic) Refus sur tuile non vue : octets identiques pour une cible cachée et une cible inexistante.
 - **AC-BR36** (Intégration) Intention visant une unité du joueur, auteur caché : le marqueur est sur la tuile du joueur et aucune position de l'auteur n'atteint le HUD. [BLOQUÉ 9, 17]
 - **AC-BR37** (Logic) **GIVEN** un dormant éveillé par l'autre faction hors de vue, **THEN** le bit 2 reste posé jusqu'à ce que la tuile soit VISIBLE, puis il est effacé.
-- **AC-BR38** (Logic) **GIVEN** un chargement avec bit 0 stocké altéré, **THEN** il est remis à 0 et le cache recalculé, une trace est écrite au journal, `découverte` et octet 1 sont conservés ; si b0 est recalculé à 1 avec b1 = 0, b1 est posé et la correction journalisée.
+- **AC-BR38** (Logic) **GIVEN** un chargement avec bit 0 stocké altéré, **THEN** il est remis à 0 et le cache recalculé, une trace est écrite au journal, `découverte` et octet 1 sont conservés ; si b0 est recalculé à 1 avec b1 = 0, le fichier est refusé comme corrompu.
 - **AC-BR39** (Logic) Sauvegarde, chargement, resérialisation sans commande : tranche identique à l'octet.
 - **AC-BR40** (Logic) Même état et même commande, deux exécutions : octets identiques ; recherche statique : aucun flottant dans le module.
 - **AC-BR41** (Logic) Faction éliminée : vue figée en EXPLORÉE, `découverte` et octet 1 conservés ; IA passive : sa vue reste recalculée. [PROV]

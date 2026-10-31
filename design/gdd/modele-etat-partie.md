@@ -84,7 +84,7 @@ définit le sens de ses champs et les seules fonctions qui l'écrivent.
 
 | Tranche | Contenu | Propriétaire |
 |---|---|---|
-| En-tête de partie | Version du schéma, identifiant de partie, époque de réinitialisation du profil à la création, graine, compteur de tirages, compteurs d'identifiants (prochain id d'unité, de nœud, de ruine, d'intention), numéro de tour, T_MAX, drapeau « IA passive », phase en cours, faction active, statut de fin | 1 (schéma, identifiant, époque, graine, compteurs d'id) ; 3 (tour, T_MAX, IA passive, phase, faction active, statut de fin) |
+| En-tête de partie | Identifiant de partie, époque de réinitialisation du profil à la création, graine, compteur de tirages, compteurs d'identifiants (prochain id d'unité, de nœud, de ruine, d'intention), numéro de tour, T_MAX, drapeau « IA passive », phase en cours, faction active, statut de fin | 1 (identifiant, époque, graine, compteurs d'id) ; 3 (tour, T_MAX, IA passive, phase, faction active, statut de fin) |
 | Carte | Dimensions, terrain de chaque tuile (fixe pendant la partie), propriétaire de chaque tuile, couche d'ancrage de chaque tuile (NŒUD, RUINE ou aucun), dernier changement de propriétaire de chaque tuile (tour, propriétaire précédent, cause : capture, combat ou ruine), point d'intérêt de chaque tuile | 2 (dimensions, terrain, points d'intérêt) ; 11 (propriétaire et dernier changement) |
 | Visibilité | Pour chaque faction : tuiles déjà découvertes et **dernier propriétaire vu** de chaque tuile (mémoire du territoire hors de vue, 1 octet par tuile et par faction ; décision du 2026-10-30) ; la vision actuelle n'est pas stockée | 5 |
 | Unités | Par id : type, faction, position, PV, a bougé, a agi, endormie | 6 (le réveil de 7 et les PV du combat 8 passent par les fonctions de 6) |
@@ -195,8 +195,8 @@ l'animation, la sélection et tout ce qui est purement visuel. Une valeur qui se
     L'instantané qui permet d'annuler le dernier déplacement est une copie gardée
     **hors de l'état** par les commandes (23), jamais sauvegardée.
 13. **Sérialisable sans perte.** L'état se sérialise et se recharge en un état égal
-    (égalité profonde définie par ce système). L'en-tête porte un numéro de version du
-    schéma ; un état d'une version plus ancienne est migré au chargement, un état d'une
+    (égalité profonde définie par ce système). Le numéro de version du schéma est porté
+    par l'enveloppe du fichier (ADR-0006), pas par l'état ; un état d'une version plus ancienne est migré au chargement, un état d'une
     version plus récente est refusé. Ce système possède le schéma et le contrat
     « vers données / depuis données » ; la sauvegarde (16) possède les fichiers, l'écriture
     atomique et le moment des sauvegardes. **Égalité profonde** (ADR-0003 : elle ignore les lignes mortes et la disposition interne ; `to_bytes` est déterministe et rend la charge utile seule ; l'enveloppe, la taille et l'empreinte d'intégrité relèvent de la sauvegarde, ADR-0006) : deux états sont égaux
