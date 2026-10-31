@@ -1,7 +1,7 @@
 # ADR-0001: Rendu des tuiles — MultiMesh, deux vec4 par instance, module d'onde pur
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-30

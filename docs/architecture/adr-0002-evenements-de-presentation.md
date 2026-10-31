@@ -1,7 +1,7 @@
 # ADR-0002: Événements de présentation — file explicite, horloge de présentation et séquenceur en machine à états
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-30

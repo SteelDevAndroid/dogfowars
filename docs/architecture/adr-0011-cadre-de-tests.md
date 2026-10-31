@@ -1,7 +1,7 @@
 # ADR-0011: Cadre de tests — gdUnit4 en headless, doublures et fabriques partagées, tests de propriétés déterministes, scripts shell pour l'outillage
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-31

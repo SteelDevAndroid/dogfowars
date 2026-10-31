@@ -1,7 +1,7 @@
 # ADR-0003: État de partie — colonnes de tableaux typés, copie par duplicate(), sérialisation binaire versionnée
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-30

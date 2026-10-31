@@ -1,7 +1,7 @@
 # ADR-0009: Données de jeu — fichiers JSON validés, entiers seulement, chargés une fois au démarrage dans un catalogue immuable
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-31

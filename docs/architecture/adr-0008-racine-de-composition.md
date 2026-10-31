@@ -1,7 +1,7 @@
 # ADR-0008: Racine de composition — un seul Bootstrap, deux portées (application, partie), aucun autoload
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-31

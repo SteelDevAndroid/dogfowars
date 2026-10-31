@@ -1,7 +1,7 @@
 # ADR-0006: Sauvegarde — enveloppe binaire à préfixe figé, écriture synchrone en série, port d'écriture injecté
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-30
@@ -31,7 +31,7 @@ Un unique écrivain en série (`SaveStore`) écrit quatre fichiers sous `user://
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0003 (`to_bytes`, `from_bytes`, schéma de contenu, `restore_from`) ; ADR-0004 (`PostCommitPort`, ordre sauvegarde avant `EventSink.push`, `ProfilePort`, commande interne VALIDER_LA_LECTURE) — **encore Proposed** : cet ADR ne peut pas être accepté avant eux, et l'amendement d'ADR-0003 (enveloppe) passe en même temps |
+| **Depends On** | ADR-0003 (`to_bytes`, `from_bytes`, schéma de contenu, `restore_from`) ; ADR-0004 (`PostCommitPort`, ordre sauvegarde avant `EventSink.push`, `ProfilePort`, commande interne VALIDER_LA_LECTURE) — Accepted avant celui-ci ; l'amendement d'ADR-0003 (enveloppe) est fait |
 | **Enables** | Stories de persistance (partie, profil, migration, réconciliation) ; menus (18) ; chronique (14) |
 | **Blocks** | Stories Core : sauvegarde, chargement, réconciliation du journal de ruines, migration |
 | **Ordering Note** | Après ADR-0003 et ADR-0004. La mesure Android est un critère de validation, pas une condition d'acceptation, **parce que** chaque point NOT SOURCEABLE a un repli écrit dans la Décision (renommage, cycle de vie, exclusion, fil d'écriture) |

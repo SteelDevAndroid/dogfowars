@@ -1,7 +1,7 @@
 # ADR-0010: Entrées tactiles et caméra de carte — interpréteur de gestes pur, caméra mathématique sans Camera2D, échelle en dp par le facteur de contenu
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-31

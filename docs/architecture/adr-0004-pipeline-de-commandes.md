@@ -1,7 +1,7 @@
 # ADR-0004: Pipeline de commandes — commandes en données pures, handlers typés par système, validation sur vue filtrée
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-30

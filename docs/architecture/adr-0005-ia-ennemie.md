@@ -1,7 +1,7 @@
 # ADR-0005: IA ennemie — planificateur pur sur copie filtrée figée, exécuteur cadencé par la présentation
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-30
@@ -31,7 +31,7 @@ Le tour de l'IA est une fonction déterministe de l'état au début de la phase 
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0003 (état, tranches, `filtered_copy`, `duplicate_state`) ; ADR-0004 (`submit`, `check`, `preview`, `apply_on`) ; ADR-0002 (état inactif du séquenceur, file bornée) — Accepted avant celui-ci |
+| **Depends On** | ADR-0003 (état, tranches, `filtered_copy`, `duplicate_state`) ; ADR-0004 (`submit`, `check`, `preview`, `apply_on`) ; ADR-0002 (état inactif du séquenceur, file bornée) ; ADR-0007 (prédicat de visibilité de la perception) — Accepted avant celui-ci |
 | **Enables** | ADR du système de sauvegarde (reprise de tour) ; stories d'IA ; équilibrage des poids en données |
 | **Blocks** | Stories Feature : IA ennemie (planificateur, rôles, runner, intentions, siège) |
 | **Ordering Note** | Après ADR-0003, ADR-0002, ADR-0004 |

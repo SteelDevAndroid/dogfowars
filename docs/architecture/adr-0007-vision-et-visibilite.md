@@ -1,7 +1,7 @@
 # ADR-0007: Vision et visibilité — un service unique, un cache de vue transitoire, un prédicat partagé par FactionView et filtered_copy
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-10-31
